@@ -19,7 +19,7 @@ from .hsk import HSKWordLists
 from .epub_analyzer import ChineseEPUBAnalyzer, BookAnalysis
 from .anki_parser import AnkiExportParser, AnkiCard
 from .improver import AnkiImprover
-from .llm import GptFieldGenerator
+from .llm import GptFieldGenerator, GeminiFieldGenerator
 
 
 def convert_to_html_format(text: str) -> str:
@@ -442,6 +442,9 @@ def cli() -> None:
 @click.option("--use-gpt", is_flag=True, help="Use GPT to generate etymology and structural decomposition")
 @click.option("--gpt-config", type=click.Path(exists=True), help="Path to GPT configuration JSON file")
 @click.option("--gpt-model", default=None, help="Override GPT model name")
+@click.option("--use-gemini", is_flag=True, help="Use Gemini to generate etymology and structural decomposition")
+@click.option("--gemini-config", type=click.Path(exists=True), help="Path to Gemini configuration JSON file")
+@click.option("--gemini-model", default=None, help="Override Gemini model name")
 @click.option("--dry-run", is_flag=True, help="Show what would be done without making changes")
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.option("--html-output", is_flag=True, help="Show raw HTML output for debugging (default: terminal-formatted)")
@@ -455,11 +458,18 @@ def convert(
     use_gpt: bool,
     gpt_config: Optional[str],
     gpt_model: Optional[str],
+    use_gemini: bool,
+    gemini_config: Optional[str],
+    gemini_model: Optional[str],
     dry_run: bool,
     verbose: bool,
     html_output: bool,
 ) -> None:
     """Convert Pleco flashcard exports to Anki-compatible format."""
+    
+    # Check for mutually exclusive LLM options
+    if use_gpt and use_gemini:
+        raise click.ClickException("Cannot use both --use-gpt and --use-gemini at the same time. Choose one.")
 
     # Configure logging level
     import logging
@@ -566,6 +576,15 @@ def convert(
                     api_key=llm_cfg.get("api_key"),
                     prompt_path=llm_cfg.get("prompt"),
                     thinking=llm_cfg.get("thinking"),
+                )
+            elif use_gemini:
+                llm_cfg = load_llm_config(gemini_config, verbose)
+                model_name = str(gemini_model or llm_cfg.get("model", "gemini-2.5-flash-lite"))
+                field_generator = GeminiFieldGenerator(
+                    model=model_name,
+                    api_key=llm_cfg.get("api_key"),
+                    prompt_path=llm_cfg.get("prompt"),
+                    temperature=llm_cfg.get("temperature"),
                 )
 
             # Generate GPT fields in parallel if GPT is enabled
@@ -755,10 +774,11 @@ def convert(
                     )
 
                 # Display GPT usage summary
-                if use_gpt and gpt_calls > 0:
+                if (use_gpt or use_gemini) and gpt_calls > 0:
+                    provider_name = "GPT" if use_gpt else "Gemini"
                     click.echo(
                         click.style(
-                            f"GPT Usage: {gpt_calls} calls, {total_tokens:,} tokens, ${total_cost:.4f} total cost",
+                            f"{provider_name} Usage: {gpt_calls} calls, {total_tokens:,} tokens, ${total_cost:.4f} total cost",
                             fg="blue",
                         )
                     )
@@ -804,10 +824,11 @@ def convert(
                         )
 
                 # Display GPT usage summary for dry-run
-                if use_gpt and gpt_calls > 0:
+                if (use_gpt or use_gemini) and gpt_calls > 0:
+                    provider_name = "GPT" if use_gpt else "Gemini"
                     click.echo(
                         click.style(
-                            f"Dry run: GPT usage - {gpt_calls} calls, {total_tokens:,} tokens, "
+                            f"Dry run: {provider_name} usage - {gpt_calls} calls, {total_tokens:,} tokens, "
                             f"${total_cost:.4f} total cost",
                             fg="blue",
                         )

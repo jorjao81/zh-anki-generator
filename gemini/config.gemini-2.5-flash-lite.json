@@ -1,0 +1,5 @@
+{
+  "model": "gemini-2.5-flash-lite",
+  "prompt": "gemini/prompt.md",
+  "temperature": 0.1
+}

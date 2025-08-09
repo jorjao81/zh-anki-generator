@@ -172,3 +172,148 @@ class GptFieldGenerator(FieldGenerator):
             etymology=data.get("etymology_html"),
             token_usage=token_usage,
         )
+
+
+class GeminiFieldGenerator(FieldGenerator):
+    """Generate fields using Google Gemini model."""
+
+    # Gemini 2.5 pricing per 1M tokens (2025 pricing)
+    PRICING = {
+        "gemini-2.5-pro": {"input": 1.25, "output": 10.00, "cached_input": 0.3125},
+        "gemini-2.5-flash": {"input": 0.30, "output": 2.50, "cached_input": 0.075},
+        "gemini-2.5-flash-lite": {"input": 0.10, "output": 0.40, "cached_input": 0.025},
+    }
+
+    def __init__(
+        self,
+        model: str,
+        api_key: Optional[str] = None,
+        prompt_path: Optional[str] = None,
+        temperature: Optional[float] = None,
+    ) -> None:
+        import google.generativeai as genai
+        
+        if api_key:
+            genai.configure(api_key=api_key)
+        
+        self.model = model
+        self.temperature = temperature
+        self.prompt = ""
+        if prompt_path:
+            with open(prompt_path, "r", encoding="utf-8") as f:
+                self.prompt = f.read()
+
+            # Load examples from the examples directory if it exists
+            from pathlib import Path
+
+            examples_dir = Path(prompt_path).parent / "examples"
+            if examples_dir.exists():
+                self.prompt = self._load_prompt_with_examples(self.prompt, examples_dir)
+
+        # Initialize the model
+        self.genai_model = genai.GenerativeModel(model)
+
+    def _load_prompt_with_examples(self, base_prompt: str, examples_dir) -> str:
+        """Load examples from the examples directory and incorporate them into the prompt."""
+        import glob
+        import os
+
+        examples_text = "\n\nHere are examples of the expected output format:\n\n"
+
+        # Load all structural decomposition examples
+        structural_files = glob.glob(str(examples_dir / "structural_decomposition*.html"))
+        structural_files.sort()  # Ensure consistent ordering
+        
+        for i, structural_path in enumerate(structural_files, 1):
+            if os.path.getsize(structural_path) > 0:  # Skip empty files
+                with open(structural_path, "r", encoding="utf-8") as f:
+                    structural_content = f.read().strip()
+                if structural_content:
+                    example_name = "忆" if i == 1 else f"example {i}"
+                    examples_text += f"**Example structural_decomposition_html for {example_name}:**\n```html\n{structural_content}\n```\n\n"
+
+        # Load all etymology examples
+        etymology_files = glob.glob(str(examples_dir / "etymology*.html"))
+        etymology_files.sort()  # Ensure consistent ordering
+        
+        for i, etymology_path in enumerate(etymology_files, 1):
+            if os.path.getsize(etymology_path) > 0:  # Skip empty files
+                with open(etymology_path, "r", encoding="utf-8") as f:
+                    etymology_content = f.read().strip()
+                if etymology_content:
+                    example_name = "忆" if i == 1 else f"example {i}"
+                    examples_text += f"**Example etymology_html for {example_name}:**\n```html\n{etymology_content}\n```\n\n"
+
+        examples_text += "Please follow these formats exactly, using the same HTML structure and CSS classes.\n"
+
+        return base_prompt + examples_text
+
+    def _calculate_cost(self, usage_dict: dict) -> float:
+        """Calculate cost in USD based on token usage."""
+        if self.model not in self.PRICING:
+            return 0.0
+
+        pricing = self.PRICING[self.model]
+        # Gemini API uses 'prompt_token_count' and 'candidates_token_count'
+        prompt_tokens = usage_dict.get("prompt_token_count", 0)
+        completion_tokens = usage_dict.get("candidates_token_count", 0)
+
+        # Cost per 1M tokens, so divide by 1,000,000
+        input_cost = (prompt_tokens * pricing["input"]) / 1_000_000
+        output_cost = (completion_tokens * pricing["output"]) / 1_000_000
+
+        return input_cost + output_cost
+
+    def generate(self, chinese: str, pinyin: str) -> FieldGenerationResult:
+        import json
+
+        # Create the prompt with character and pinyin
+        user_input = json.dumps({"character": chinese, "pinyin": pinyin}, ensure_ascii=False)
+        full_prompt = f"{self.prompt}\n\n{user_input}"
+
+        # Configure generation parameters
+        generation_config = {}
+        if self.temperature is not None:
+            generation_config["temperature"] = self.temperature
+        
+        # Set response format to JSON
+        generation_config["response_mime_type"] = "application/json"
+
+        try:
+            response = self.genai_model.generate_content(
+                full_prompt,
+                generation_config=generation_config
+            )
+            
+            content = response.text
+            data = json.loads(content)
+
+            # Extract token usage and calculate cost
+            usage_dict = {}
+            if hasattr(response, 'usage_metadata') and response.usage_metadata:
+                usage_dict = {
+                    "prompt_token_count": response.usage_metadata.prompt_token_count,
+                    "candidates_token_count": response.usage_metadata.candidates_token_count,
+                    "total_token_count": response.usage_metadata.total_token_count,
+                }
+            
+            cost = self._calculate_cost(usage_dict)
+
+            token_usage = TokenUsage(
+                prompt_tokens=usage_dict.get("prompt_token_count", 0),
+                completion_tokens=usage_dict.get("candidates_token_count", 0),
+                total_tokens=usage_dict.get("total_token_count", 0),
+                cost_usd=cost,
+            )
+
+            return FieldGenerationResult(
+                structural_decomposition=data.get("structural_decomposition_html"),
+                etymology=data.get("etymology_html"),
+                token_usage=token_usage,
+            )
+
+        except Exception as e:
+            # Return empty result with error info in case of failure
+            return FieldGenerationResult(
+                token_usage=TokenUsage(cost_usd=0.0)
+            )
