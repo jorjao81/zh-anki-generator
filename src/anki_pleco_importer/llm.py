@@ -114,8 +114,9 @@ class GptFieldGenerator(FieldGenerator):
             return 0.0
 
         pricing = self.PRICING[self.model]
-        prompt_tokens = usage_dict.get("prompt_tokens", 0)
-        completion_tokens = usage_dict.get("completion_tokens", 0)
+        # OpenAI Responses API uses 'input_tokens' and 'output_tokens'
+        prompt_tokens = usage_dict.get("input_tokens", usage_dict.get("prompt_tokens", 0))
+        completion_tokens = usage_dict.get("output_tokens", usage_dict.get("completion_tokens", 0))
 
         # Cost per 1M tokens, so divide by 1,000,000
         input_cost = (prompt_tokens * pricing["input"]) / 1_000_000
@@ -155,9 +156,13 @@ class GptFieldGenerator(FieldGenerator):
         usage_dict = response.usage.dict() if response.usage else {}
         cost = self._calculate_cost(usage_dict)
 
+        # OpenAI Responses API uses 'input_tokens' and 'output_tokens'
+        prompt_tokens = usage_dict.get("input_tokens", usage_dict.get("prompt_tokens", 0))
+        completion_tokens = usage_dict.get("output_tokens", usage_dict.get("completion_tokens", 0))
+
         token_usage = TokenUsage(
-            prompt_tokens=usage_dict.get("prompt_tokens", 0),
-            completion_tokens=usage_dict.get("completion_tokens", 0),
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
             total_tokens=usage_dict.get("total_tokens", 0),
             cost_usd=cost,
         )
