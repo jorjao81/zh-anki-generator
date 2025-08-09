@@ -66,19 +66,55 @@ class AnkiExportParser:
                 # Parse card data
                 parts = line.split(self.separator)
                 if len(parts) >= 5:  # Minimum required fields
-                    card = AnkiCard(
-                        notetype=parts[0] if len(parts) > 0 else "",
-                        pinyin=parts[1] if len(parts) > 1 else "",
-                        characters=parts[2] if len(parts) > 2 else "",
-                        audio=parts[3] if len(parts) > 3 else "",
-                        definitions=parts[4] if len(parts) > 4 else "",
-                        components=parts[7] if len(parts) > 7 else "",
-                        radicals=parts[6] if len(parts) > 6 else "",
-                        tags=parts[16] if len(parts) > 16 else "",
-                    )
-                    self.cards.append(card)
+                    card = self._create_card_from_parts(parts)
+                    if card:
+                        self.cards.append(card)
 
         return self.cards
+
+    def _create_card_from_parts(self, parts: List[str]) -> Optional[AnkiCard]:
+        """Create AnkiCard from parts, handling different note type formats."""
+        if not parts:
+            return None
+            
+        # Determine note type - could be in different positions
+        notetype = ""
+        
+        # Try to identify the note type
+        for i, part in enumerate(parts):
+            if part in ["Chinese", "Chinese 2"]:
+                notetype = part
+                break
+        
+        # If we can't identify the note type, assume it's in the first position (legacy format)
+        if not notetype:
+            notetype = parts[0] if len(parts) > 0 else ""
+        
+        # Handle different field mappings based on note type
+        if notetype == "Chinese 2":
+            # Chinese 2 format: [notetype, characters, pinyin, audio, definition, ?, ?, components, ?, ...]
+            return AnkiCard(
+                notetype=notetype,
+                characters=parts[1] if len(parts) > 1 else "",
+                pinyin=parts[2] if len(parts) > 2 else "",
+                audio=parts[3] if len(parts) > 3 else "",
+                definitions=parts[4] if len(parts) > 4 else "",
+                components=parts[7] if len(parts) > 7 else "",
+                radicals=parts[6] if len(parts) > 6 else "",
+                tags=parts[16] if len(parts) > 16 else "",
+            )
+        else:
+            # Chinese format: [notetype, pinyin, characters, audio, definition, ?, ?, components, ?, ...]
+            return AnkiCard(
+                notetype=notetype,
+                characters=parts[2] if len(parts) > 2 else "",
+                pinyin=parts[1] if len(parts) > 1 else "",
+                audio=parts[3] if len(parts) > 3 else "",
+                definitions=parts[4] if len(parts) > 4 else "",
+                components=parts[7] if len(parts) > 7 else "",
+                radicals=parts[6] if len(parts) > 6 else "",
+                tags=parts[16] if len(parts) > 16 else "",
+            )
 
     def _parse_header(self, line: str) -> None:
         """Parse header lines to extract format information."""

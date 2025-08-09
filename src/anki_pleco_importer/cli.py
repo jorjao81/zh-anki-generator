@@ -65,8 +65,11 @@ def format_html(html_content: str) -> str:
             indent = "  " * indent_level
             
             if element.name is None:  # Text node
-                text = str(element).strip()
-                if text:
+                text = str(element)
+                # Only strip if the text is purely whitespace, otherwise preserve spacing
+                if text.strip():
+                    return text
+                elif text:  # Has whitespace - preserve it
                     return text
                 return ""
             

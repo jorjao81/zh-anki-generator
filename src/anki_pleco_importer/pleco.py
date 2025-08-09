@@ -25,7 +25,9 @@ def format_html(html_content: str) -> str:
         # Custom formatter that keeps inline elements inline
         def format_tag(tag, level=0):
             if tag.name is None:  # Text node
-                return str(tag).strip()
+                text = str(tag)
+                # Preserve whitespace for proper spacing around inline elements
+                return text
             
             indent = '  ' * level
             
