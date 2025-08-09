@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chinese Learning Card Preview</title>
+    <style>
+/* Chinese Learning Card Theme */
+/* Optimized for mobile and desktop, clean and functional design */
+/* CJK Font Declarations for Comprehensive Character Support */
+/* Import this file in themes to ensure rare character rendering */
+
+/* BabelStone Han - Comprehensive CJK support including Extensions */
+/* Font files should be placed in Anki media collection folder */
+@font-face {
+  font-family: 'BabelStone Han';
+  src: url('_BabelStoneHan.ttf');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+4E00-9FFF, U+3400-4DBF, U+20000-2A6DF, U+2A700-2B73F, U+2B740-2B81F, U+2B820-2CEAF;
+}
+
+/* HanaMin Fonts - Alternative comprehensive CJK support */
+@font-face {
+  font-family: 'HanaMinA';
+  src: url('_HanaMinA.ttf');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+4E00-9FFF, U+3400-4DBF;
+}
+
+@font-face {
+  font-family: 'HanaMinB';
+  src: url('_HanaMinB.ttf');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+20000-2A6DF;
+}
+
+@font-face {
+  font-family: 'HanaMinC';
+  src: url('_HanaMinPlus.ttf');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+2A700-2B73F, U+2B740-2B81F, U+2B820-2CEAF;
+}
+
+/* Noto CJK Fonts - Modern fallback support */
+@font-face {
+  font-family: 'Noto Sans CJK SC';
+  src: url('_NotoSansCJKsc.ttf');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Noto Serif CJK SC';
+  src: url('_NotoSerifCJKsc.ttf');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Comprehensive CJK Font Stack */
+:root {
+  --cjk-font-stack: 'BabelStone Han', 'HanaMinA', 'HanaMinB', 'HanaMinC', 'Noto Sans CJK SC', 'Noto Serif CJK SC', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'SimSun-ExtB', 'MingLiU-ExtB', 'Source Han Sans CN', sans-serif;
+  --cjk-serif-stack: 'BabelStone Han', 'HanaMinA', 'HanaMinB', 'HanaMinC', 'Noto Serif CJK SC', 'Source Han Serif CN', 'Songti SC', 'SimSun', 'SimSun-ExtB', serif;
+  --cjk-mono-stack: 'BabelStone Han', 'HanaMinA', 'HanaMinB', 'Noto Sans Mono CJK SC', 'SF Mono', 'Menlo', 'Consolas', monospace;
+}
+
+/* Base CJK character styling */
+.hanzi,
+.chinese,
+[lang="zh"],
+[lang="zh-CN"],
+[lang="zh-TW"] {
+  font-family: var(--cjk-font-stack);
+}
+
+/* Component-specific styling for rare characters */
+.components-content .hanzi,
+.etymology-content .hanzi,
+.etymology-content .hanzi,
+.components-content .semantic,
+.components-content .unknown,
+.components-content .phonetic {
+  font-family: var(--cjk-font-stack);
+  font-feature-settings: "kern" 1, "liga" 1;
+}
+
+/* Card Container */
+.card {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 15px;
+  background: #ffffff;
+  color: #333333;
+  line-height: 1.6;
+  min-height: 200px;
+}
+
+.card-container {
+  text-align: center;
+}
+
+/* Chinese Header - Horizontal Layout */
+.chinese-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin: 20px 0;
+  flex-wrap: wrap;
+}
+
+/* Chinese Characters - Main Focus */
+.chinese-main {
+  font-family: var(--cjk-font-stack);
+  font-size: 3.5em;
+  font-weight: 300;
+  color: #2c3e50;
+  line-height: 1.2;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+/* Chinese Side Content */
+.chinese-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Pinyin */
+.pinyin-main {
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 1.2em;
+  color: #e74c3c;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+}
+
+/* Audio */
+.audio-section {
+  margin: 0;
+}
+
+/* Prompt on front */
+.prompt {
+  font-size: 0.9em;
+  color: #7f8c8d;
+  font-style: italic;
+  margin-top: 40px;
+  opacity: 0.8;
+}
+
+/* Divider between front and back */
+.divider {
+  border: none;
+  height: 1px;
+  background: linear-gradient(to right, transparent, #bdc3c7, transparent);
+  margin: 25px 0;
+}
+
+/* Section Styling */
+h2.section-title {
+  font-size: 0.9em;
+  font-weight: 600;
+  color: #34495e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 15px 0 8px 0;
+  text-align: left;
+}
+
+.definition-section,
+.examples-section,
+.components-section,
+.etymology-section,
+.similar-section {
+  margin: 15px 0;
+  text-align: left;
+}
+
+.examples-content {
+  line-height: 1.8;
+}
+
+.examples-content .hanzi {
+  font-family: var(--cjk-font-stack);
+}
+
+.examples-content .pinyin {
+  margin: 0 8px;
+}
+
+.examples-content .translation {
+  margin-left: 8px;
+}
+
+/* Definition Content */
+.definition-content {
+  font-size: 1.1em;
+  color: #2c3e50;
+  margin-bottom: 15px;
+}
+
+/* Etymology Content */
+.etymology-content {
+  font-size: 0.95em;
+  color: #2c3e50;
+  line-height: 1.7;
+}
+
+.etymology-content h3 {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #34495e;
+  margin: 15px 0 8px 0;
+  text-align: left;
+}
+
+.etymology-content p {
+  margin: 10px 0;
+  line-height: 1.6;
+}
+
+/* Part of Speech Tags */
+.part-of-speech {
+  display: inline-block;
+  background: #3498db;
+  color: white;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 0.75em;
+  font-weight: 600;
+  margin: 2px 4px 2px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Domain Tags */
+.domain {
+  display: inline-block;
+  background: #9b59b6;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 0.7em;
+  font-weight: 500;
+  margin: 2px 3px 2px 0;
+  text-transform: lowercase;
+}
+
+/* Example Lists */
+ul {
+  margin: 15px 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+ul li.example {
+  margin: 10px 0;
+  padding: 12px 15px;
+  background: #f7f9fc;
+  border-radius: 8px;
+  border: 1px solid #e1e8ed;
+  font-size: 0.9em;
+}
+
+/* Example Content Styling */
+.hanzi {
+  font-family: var(--cjk-font-stack);
+  font-weight: 500;
+  color: #2c3e50;
+  margin: 0 4px;
+}
+
+.pinyin {
+  color: #e74c3c;
+  font-weight: 500;
+  font-style: italic;
+  margin: 0 4px;
+}
+
+.translation {
+  color: #34495e;
+  font-weight: 500;
+}
+
+/* Structural Analysis - Horizontal Layout */
+.components-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin: 10px 0;
+  flex-wrap: wrap;
+  justify-content: center;
+  border: 1px solid #e9ecef;
+}
+
+/* Override Anki's default styling for all Chinese characters in components */
+.components-content *,
+.components-section * {
+  background: none !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Restore our intentional styling */
+.components-content {
+  background: #f8f9fa !important;
+  border: 1px solid #e9ecef !important;
+}
+
+.components-content ul li {
+  background: #ffffff !important;
+  border: 2px solid #3498db !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+}
+
+.components-content ul {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+}
+
+.components-content ul li {
+  background: #ffffff;
+  color: #2c3e50;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-weight: 500;
+  text-align: center;
+  min-width: 60px;
+  max-width: 120px;
+  margin: 0;
+  border: 2px solid #3498db;
+  font-size: 0.85em;
+  line-height: 1.3;
+  position: relative;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.components-content ul li:not(:last-child)::after {
+  content: "+";
+  position: absolute;
+  color: #95a5a6;
+  font-weight: bold;
+  font-size: 1.2em;
+  background: none;
+  border: none;
+  right: -16px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Component types in horizontal layout - with titles */
+.components-content .semantic,
+.components-content .phonetic,
+.components-content .unknown {
+  border-color: #bdc3c7;
+  background: #f8f9fa;
+  color: #2c3e50;
+  position: relative;
+  padding-top: 20px;
+}
+
+/* Component type titles */
+.components-content .semantic::before {
+  content: "SEMANTIC";
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #34495e;
+  color: white;
+  font-size: 0.6em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.components-content .phonetic::before {
+  content: "PHONETIC";
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #34495e;
+  color: white;
+  font-size: 0.6em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.components-content .unknown::before {
+  content: "UNKNOWN";
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #34495e;
+  color: white;
+  font-size: 0.6em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+/* Component content styling */
+.components-content .hanzi {
+  font-size: 1.1em;
+  font-weight: 700;
+  font-family: var(--cjk-font-stack);
+  margin-right: 4px;
+  /* Override Anki's default CJK styling */
+  background: none !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.components-content .pinyin {
+  font-size: 0.75em;
+  opacity: 0.8;
+  font-style: italic;
+  font-weight: 500;
+  color: #e74c3c;
+  margin: 0 4px;
+}
+
+.components-content .definition {
+  display: block;
+  font-size: 0.7em;
+  opacity: 0.9;
+  line-height: 1.2;
+  font-weight: 400;
+  margin-top: 2px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.definition {
+  color: #7f8c8d;
+  font-style: italic;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 600px) {
+  .card {
+    padding: 12px;
+    margin: 5px;
+  }
+
+  .chinese-header {
+    flex-direction: column;
+    gap: 12px;
+    margin: 15px 0;
+  }
+
+  .chinese-main {
+    font-size: 2.8em;
+  }
+
+  .pinyin-main {
+    font-size: 1.1em;
+  }
+
+  h2.section-title {
+    font-size: 0.8em;
+  }
+
+  ul li.example {
+    padding: 8px 10px;
+    margin: 6px 0;
+    font-size: 0.9em;
+  }
+
+  .part-of-speech, .domain {
+    font-size: 0.7em;
+    padding: 2px 6px;
+  }
+
+  .components-content {
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .components-content ul {
+    gap: 6px;
+  }
+
+  .components-content ul li {
+    min-width: 50px;
+    max-width: 100px;
+    padding: 6px 8px;
+    font-size: 0.8em;
+  }
+
+  .components-content ul li:not(:last-child)::after {
+    right: -12px;
+    font-size: 1em;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .card {
+    background: #2c3e50;
+    color: #ecf0f1;
+  }
+
+  .chinese-main {
+    color: #ffffff;
+  }
+
+  .pinyin-main {
+    color: #e74c3c;
+  }
+
+  h2.section-title {
+    color: #bdc3c7;
+  }
+
+  .definition-content {
+    color: #ecf0f1;
+  }
+
+  ul li.example {
+    background: #34495e;
+    color: #ecf0f1;
+  }
+
+  .components-content ul li {
+    background: #3e2723;
+  }
+
+  .divider {
+    background: linear-gradient(to right, transparent, #7f8c8d, transparent);
+  }
+}
+
+body {
+  margin: 0;
+  padding: 20px;
+  background: #f8f9fa;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="card-container">
+            <!-- Front side repeated for context -->
+            <div class="chinese-header">
+                <div class="chinese-main">
+                    唇
+                </div>
+                <div class="chinese-side">
+                    <div class="pinyin-main">
+                        chún
+                    </div>
+                </div>
+            </div>
+
+            <hr class="divider">
+
+            <!-- Back side content -->
+            <div class="definition-section">
+                <h2 class="section-title">Definition</h2>
+                <div class="definition-content">
+                    <span class="part-of-speech">noun</span> lip
+                </div>
+            </div>
+
+            <div class="components-section">
+                <h2 class="section-title">Structural Analysis</h2>
+                <div class="components-content">
+                    <ul>
+                        <li class="semantic"><span class="hanzi">口</span><span class="pinyin">kǒu</span><span
+                                class="definition">mouth; opening</span></li>
+                        <li class="phonetic"><span class="hanzi">辰</span><span class="pinyin">chén</span><span
+                                class="definition">fifth Earthly Branch; time, daybreak (phonetic)</span></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="etymology-section">
+                <h2 class="section-title">Etymology</h2>
+                <div class="etymology-content">
+                    <h3>Origin: Phono-semantic compound (形声字)</h3>
+                    <p><span class="hanzi">唇</span><span class="pinyin">chún</span>is a phono-semantic character analyzed as<b>口
+                            (semantic) + 辰 (phonetic)</b>. The component<span class="hanzi">口</span><span
+                            class="pinyin">kǒu</span>"mouth" indicates the semantic field (a part associated with the mouth),
+                        while<span class="hanzi">辰</span><span class="pinyin">chén</span>provides the sound.</p>
+                    <p>Historical notes: Early and seal forms commonly appear as<span class="hanzi">脣</span>(<span
+                            class="hanzi">肉</span>"flesh" +<span class="hanzi">辰</span>phonetic), emphasizing the lip as a body
+                        part.
+                        The received standard form is<span class="hanzi">唇</span>with the semantic indicator<span
+                            class="hanzi">口</span>. Both are 形声 with<span class="hanzi">辰</span>as the phonetic.</p>
+                    <p>Classical sources: 《說文解字》 glosses the word as "the fleshy part at the border of the mouth," analyzing it
+                        as a
+                        形声字 with<span class="hanzi">辰</span>as phonetic; the 《康熙字典》 records both<span
+                            class="hanzi">脣</span>and<span class="hanzi">唇</span>as interchangeable historical forms. The
+                        漢語多功能字庫 analyzes the structure as<b>⿱辰口</b>(top<span class="hanzi">辰</span>, bottom<span
+                            class="hanzi">口</span>) in the modern graph.</p>
+                    <h3>The Semantic Evolution</h3>
+                    <p><b>"mouth/flesh" (semantic) + "辰" (phonetic)</b>→ "the fleshy rim of the mouth" → modern meaning
+                        "lip(s)."
+                        Common derivatives include:<span class="hanzi">嘴唇</span><span class="pinyin">zuǐchún</span>"lips,"<span
+                            class="hanzi">唇膏</span><span class="pinyin">chúngāo</span>"lipstick," and the set phrase<span
+                            class="hanzi">唇齒相依</span><span class="pinyin">chúnchǐ xiāngyī</span>"lips and teeth mutually
+                        depend."</p>
+                    <h3>Phonetic Series and Sound</h3>
+                    <p><span class="hanzi">辰</span>functions as the phonetic in a family with similar onsets and related
+                        rimes:<span class="hanzi">辰</span><span class="pinyin">chén</span>,<span class="hanzi">晨</span><span
+                            class="pinyin">chén</span>,<span class="hanzi">宸</span><span class="pinyin">chén</span>,<span
+                            class="hanzi">振</span><span class="pinyin">zhèn</span>,<span class="hanzi">娠</span><span
+                            class="pinyin">shēn</span>, and<span class="hanzi">唇</span><span class="pinyin">chún</span>.
+                        The vowel variation (‑en/‑un) reflects historical sound change within the series.</p>
+                    <p class="semantic-evolution-path"><b>Path:</b>口/肉 (mouth, flesh) + 辰 (phonetic) → "fleshy edge of the
+                        mouth" → "lip(s)."</p>
+                </div>
+            </div>
+
+            <div class="similar-section">
+                <h2 class="section-title">Similar Characters</h2>
+                <div class="similar-content">
+                    <p>Characters with similar components or meanings:</p>
+                    <ul>
+                        <li class="example"><span class="hanzi">脣</span> <span class="pinyin">chún</span> <span
+                                class="translation">traditional form of 唇 (lip)</span></li>
+                        <li class="example"><span class="hanzi">辰</span> <span class="pinyin">chén</span> <span
+                                class="translation">fifth Earthly Branch (phonetic component)</span></li>
+                        <li class="example"><span class="hanzi">晨</span> <span class="pinyin">chén</span> <span
+                                class="translation">morning, dawn (same phonetic)</span></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="examples-section">
+                <h2 class="section-title">Examples</h2>
+                <div class="examples-content">
+                    <ul>
+                        <li class="example"><span class="hanzi">上唇</span> <span class="pinyin">shàngchún</span> <span
+                                class="translation">upper lip</span></li>
+                        <li class="example"><span class="hanzi">下唇</span> <span class="pinyin">xiàchún</span> <span
+                                class="translation">lower lip</span></li>
+                        <li class="example"><span class="hanzi">嘴唇</span> <span class="pinyin">zuǐchún</span> <span
+                                class="translation">lip&nbsp;</span></li>
+                        <li class="example"><span class="hanzi">双唇</span> <span class="pinyin">shuāngchún</span> <span
+                                class="translation">two/both lips</span></li>
+                        <li class="example"><span class="hanzi">唇亡齿寒</span> <span class="pinyin">chúnwáng-chǐhán</span> <span
+                                class="translation"><b>idiom</b> If one (of two interdependent things) falls, the other is also in
+                                danger.; share a common lot</span></li>
+                        <li class="example"><span class="hanzi">唇齿</span> <span class="pinyin">chúnchǐ</span> <span
+                                class="translation">(fig.) close partners; interdependent</span></li>
+                        <li class="example"><span class="hanzi">唇齿相依</span> <span class="pinyin">chúnchǐ-xiāngyī</span> <span
+                                class="translation"><b>idiom</b> be as close as lips and teeth; be closely related and mutually
+                                dependent&nbsp;</span></li>
+                        <li class="example"><span class="hanzi">唇膏</span> <span class="pinyin">chúngāo</span> <span
+                                class="translation">lipstick</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

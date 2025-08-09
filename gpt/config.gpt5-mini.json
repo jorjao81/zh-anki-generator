@@ -1,4 +1,7 @@
 {
   "model": "gpt-5-mini",
-  "prompt": "gpt/prompt.md"
+  "prompt": "gpt/prompt.md",
+  "reasoning_effort": "medium",
+  "temperature": 0.5,
+  "use_web_search": false
 }

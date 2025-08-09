@@ -1,0 +1,7 @@
+{
+  "model": "gpt-5",
+  "prompt": "gpt/prompt.md",
+  "reasoning_effort": "high",
+  "temperature": 0.4,
+  "use_web_search": true
+}

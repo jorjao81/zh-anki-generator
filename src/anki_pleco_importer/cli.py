@@ -9,6 +9,8 @@ import shutil
 import random
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
+from bs4 import BeautifulSoup
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .parser import PlecoTSVParser
 from .pleco import pleco_to_anki, format_examples_with_semantic_markup
@@ -32,6 +34,102 @@ def convert_list_to_html_format(items: List[str]) -> str:
     if not items:
         return ""
     return "<br>".join(items)
+
+
+def format_html(html_content: str) -> str:
+    """Format HTML content with proper indentation for structural elements while keeping inline elements inline."""
+    if not html_content or not html_content.strip():
+        return html_content
+    
+    try:
+        from bs4.formatter import HTMLFormatter
+        
+        class InlineFormatter(HTMLFormatter):
+            """Custom formatter that keeps certain tags inline."""
+            
+            def __init__(self):
+                super().__init__()
+                self.inline_tags = {'span', 'b', 'i', 'em', 'strong', 'a', 'code'}
+            
+            def indent(self, tag, level):
+                """Override indent to handle inline tags differently."""
+                if tag.name in self.inline_tags:
+                    return 0  # No indentation for inline tags
+                return level
+        
+        soup = BeautifulSoup(html_content, 'html.parser')
+        
+        # Custom prettify with inline-aware formatting
+        def prettify_with_inline_awareness(element, indent_level=0):
+            result = []
+            indent = "  " * indent_level
+            
+            if element.name is None:  # Text node
+                text = str(element).strip()
+                if text:
+                    return text
+                return ""
+            
+            # Check if this is an inline element
+            inline_tags = {'span', 'b', 'i', 'em', 'strong', 'a', 'code'}
+            is_inline = element.name in inline_tags
+            
+            # Format attributes
+            attrs = []
+            for key, value in element.attrs.items():
+                if isinstance(value, list):
+                    value = ' '.join(value)
+                attrs.append(f'{key}="{value}"')
+            attrs_str = ' ' + ' '.join(attrs) if attrs else ''
+            
+            # Handle children
+            children = []
+            for child in element.children:
+                child_result = prettify_with_inline_awareness(child, indent_level + (0 if is_inline else 1))
+                if child_result:
+                    children.append(child_result)
+            
+            if not children:
+                # Self-closing or empty tag
+                if is_inline:
+                    return f"<{element.name}{attrs_str}></{element.name}>"
+                else:
+                    return f"{indent}<{element.name}{attrs_str}></{element.name}>"
+            
+            # Has children
+            if is_inline:
+                # Inline elements: keep everything on same line
+                children_text = ''.join(children)
+                return f"<{element.name}{attrs_str}>{children_text}</{element.name}>"
+            else:
+                # Block elements: format with proper indentation
+                if all(child.name in inline_tags or child.name is None for child in element.children if child.name):
+                    # All children are inline or text - keep on same line
+                    children_text = ''.join(children)
+                    return f"{indent}<{element.name}{attrs_str}>{children_text}</{element.name}>"
+                else:
+                    # Has block children - use newlines
+                    children_text = '\n'.join(f"{'  ' * (indent_level + 1)}{child}" for child in children if child)
+                    return f"{indent}<{element.name}{attrs_str}>\n{children_text}\n{indent}</{element.name}>"
+        
+        # Process all root elements
+        result_parts = []
+        for element in soup.contents:
+            if hasattr(element, 'name'):
+                formatted = prettify_with_inline_awareness(element, 0)
+                if formatted:
+                    result_parts.append(formatted)
+            else:
+                # Text node at root level
+                text = str(element).strip()
+                if text:
+                    result_parts.append(text)
+        
+        return '\n'.join(result_parts)
+        
+    except Exception:
+        # If formatting fails, return the original content
+        return html_content
 
 
 def format_html_for_terminal(text: str) -> str:
@@ -467,19 +565,46 @@ def convert(
                     thinking=llm_cfg.get("thinking"),
                 )
 
-            for i, entry in enumerate(collection, 1):
-                # Generate fields directly to capture token usage if GPT is used
-                field_result = None
-                token_usage = None
-                if field_generator:
-                    field_result = field_generator.generate(entry.chinese, entry.pinyin)
-                    token_usage = field_result.token_usage
+            # Generate GPT fields in parallel if GPT is enabled
+            field_results = {}
+            if field_generator:
+                if verbose:
+                    click.echo(f"Generating GPT fields for {len(collection)} entries...")
+                
+                def generate_gpt_field(entry):
+                    """Generate GPT field for a single entry."""
+                    return entry, field_generator.generate(entry.chinese, entry.pinyin)
+                
+                # Use ThreadPoolExecutor for parallel GPT calls
+                with ThreadPoolExecutor(max_workers=5) as executor:
+                    # Submit all GPT generation tasks
+                    future_to_entry = {
+                        executor.submit(generate_gpt_field, entry): entry 
+                        for entry in collection
+                    }
+                    
+                    # Collect results as they complete
+                    for future in as_completed(future_to_entry):
+                        try:
+                            entry, field_result = future.result()
+                            field_results[id(entry)] = field_result
+                            
+                            # Track usage statistics
+                            if field_result.token_usage:
+                                total_tokens += field_result.token_usage.total_tokens
+                                total_cost += field_result.token_usage.cost_usd
+                                gpt_calls += 1
+                        except Exception as exc:
+                            entry = future_to_entry[future]
+                            click.echo(f"GPT generation failed for {entry.chinese}: {exc}")
+                            field_results[id(entry)] = None
+                
+                if verbose:
+                    click.echo(f"GPT field generation completed.")
 
-                    # Track usage statistics
-                    if token_usage:
-                        total_tokens += token_usage.total_tokens
-                        total_cost += token_usage.cost_usd
-                        gpt_calls += 1
+            for i, entry in enumerate(collection, 1):
+                # Get pre-generated field result
+                field_result = field_results.get(id(entry)) if field_generator else None
 
                 anki_card = pleco_to_anki(entry, anki_parser, pregenerated_result=field_result)
 
@@ -529,8 +654,8 @@ def convert(
 
                 click.echo(f"    {click.style('Meaning:', fg='yellow', bold=True)}")
                 if html_output:
-                    # For HTML output, display raw HTML without formatting/escaping
-                    click.echo(f"    {anki_card.meaning}")
+                    # For HTML output, display formatted HTML
+                    click.echo(f"    {format_html(anki_card.meaning)}")
                 else:
                     formatted_meaning = convert_html_to_terminal(anki_card.meaning)
                     meaning_box = format_meaning_box(formatted_meaning)
@@ -542,8 +667,8 @@ def convert(
                     examples_html = format_examples_with_semantic_markup(anki_card.examples)
                     if examples_html:
                         if html_output:
-                            # For HTML output, display raw HTML without formatting/escaping
-                            click.echo(f"    {examples_html}")
+                            # For HTML output, display formatted HTML
+                            click.echo(f"    {format_html(examples_html)}")
                         else:
                             formatted_examples = convert_html_to_terminal(examples_html)
                             examples_box = format_meaning_box(formatted_examples)
@@ -552,8 +677,8 @@ def convert(
                 if anki_card.structural_decomposition:
                     click.echo(f"    {click.style('Components:', fg='magenta', bold=True)}")
                     if html_output:
-                        # For HTML output, display raw HTML without formatting/escaping
-                        click.echo(f"    {anki_card.structural_decomposition}")
+                        # For HTML output, display formatted HTML
+                        click.echo(f"    {format_html(anki_card.structural_decomposition)}")
                     else:
                         formatted_components = convert_html_to_terminal(anki_card.structural_decomposition)
                         component_box = format_meaning_box(formatted_components)
@@ -562,15 +687,16 @@ def convert(
                 if anki_card.etymology:
                     click.echo(f"    {click.style('Etymology:', fg='cyan', bold=True)}")
                     if html_output:
-                        # For HTML output, display raw HTML without formatting/escaping
-                        click.echo(f"    {anki_card.etymology}")
+                        # For HTML output, display formatted HTML
+                        click.echo(f"    {format_html(anki_card.etymology)}")
                     else:
                         formatted_etymology = convert_html_to_terminal(anki_card.etymology)
                         etymology_box = format_meaning_box(formatted_etymology)
                         click.echo(etymology_box)
 
                 # Display token usage for this entry if GPT was used
-                if token_usage and verbose:
+                if field_result and field_result.token_usage and verbose:
+                    token_usage = field_result.token_usage
                     tokens_text = (
                         f"Tokens: {token_usage.prompt_tokens}+{token_usage.completion_tokens}"
                         f"={token_usage.total_tokens}, Cost: ${token_usage.cost_usd:.4f}"

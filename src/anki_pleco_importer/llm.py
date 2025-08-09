@@ -49,12 +49,18 @@ class GptFieldGenerator(FieldGenerator):
         api_key: Optional[str] = None,
         prompt_path: Optional[str] = None,
         thinking: Optional[Dict[str, Any]] = None,
+        reasoning_effort: str = "medium",
+        temperature: Optional[float] = None,
+        use_web_search: bool = False,
     ) -> None:
         from openai import OpenAI
 
         self.client = OpenAI(api_key=api_key) if api_key else OpenAI()
         self.model = model
         self.thinking = thinking
+        self.reasoning_effort = reasoning_effort
+        self.temperature = temperature
+        self.use_web_search = use_web_search
         self.prompt = ""
         if prompt_path:
             with open(prompt_path, "r", encoding="utf-8") as f:
@@ -69,22 +75,34 @@ class GptFieldGenerator(FieldGenerator):
 
     def _load_prompt_with_examples(self, base_prompt: str, examples_dir) -> str:
         """Load examples from the examples directory and incorporate them into the prompt."""
+        import glob
+        import os
 
         examples_text = "\n\nHere are examples of the expected output format:\n\n"
 
-        # Load structural decomposition example
-        structural_example_path = examples_dir / "structural_decomposition.html"
-        if structural_example_path.exists():
-            with open(structural_example_path, "r", encoding="utf-8") as f:
-                structural_content = f.read().strip()
-            examples_text += f"**Example structural_decomposition_html for 忆:**\n```html\n{structural_content}\n```\n\n"
+        # Load all structural decomposition examples
+        structural_files = glob.glob(str(examples_dir / "structural_decomposition*.html"))
+        structural_files.sort()  # Ensure consistent ordering
+        
+        for i, structural_path in enumerate(structural_files, 1):
+            if os.path.getsize(structural_path) > 0:  # Skip empty files
+                with open(structural_path, "r", encoding="utf-8") as f:
+                    structural_content = f.read().strip()
+                if structural_content:
+                    example_name = "忆" if i == 1 else f"example {i}"
+                    examples_text += f"**Example structural_decomposition_html for {example_name}:**\n```html\n{structural_content}\n```\n\n"
 
-        # Load etymology example
-        etymology_example_path = examples_dir / "etymology.html"
-        if etymology_example_path.exists():
-            with open(etymology_example_path, "r", encoding="utf-8") as f:
-                etymology_content = f.read().strip()
-            examples_text += f"**Example etymology_html for 忆:**\n```html\n{etymology_content}\n```\n\n"
+        # Load all etymology examples
+        etymology_files = glob.glob(str(examples_dir / "etymology*.html"))
+        etymology_files.sort()  # Ensure consistent ordering
+        
+        for i, etymology_path in enumerate(etymology_files, 1):
+            if os.path.getsize(etymology_path) > 0:  # Skip empty files
+                with open(etymology_path, "r", encoding="utf-8") as f:
+                    etymology_content = f.read().strip()
+                if etymology_content:
+                    example_name = "忆" if i == 1 else f"example {i}"
+                    examples_text += f"**Example etymology_html for {example_name}:**\n```html\n{etymology_content}\n```\n\n"
 
         examples_text += "Please follow these formats exactly, using the same HTML structure and CSS classes.\n"
 
@@ -108,23 +126,29 @@ class GptFieldGenerator(FieldGenerator):
     def generate(self, chinese: str, pinyin: str) -> FieldGenerationResult:
         import json
 
-        messages = [
+        # Create input messages for Responses API
+        input_messages = [
             {"role": "system", "content": self.prompt},
             {
                 "role": "user",
                 "content": json.dumps({"character": chinese, "pinyin": pinyin}, ensure_ascii=False),
             },
         ]
+        
         kwargs: Dict[str, Any] = {
             "model": self.model,
-            "messages": messages,
-            "response_format": {"type": "json_object"},
+            "input": input_messages,
         }
-        if self.thinking:
-            kwargs["thinking"] = self.thinking
+        
+        if self.temperature is not None:
+            kwargs["temperature"] = self.temperature
+            
+        # Add web search tool if requested
+        if self.use_web_search:
+            kwargs["tools"] = [{"type": "web_search_preview"}]
 
-        response = self.client.chat.completions.create(**kwargs)
-        content = response.choices[0].message.content
+        response = self.client.responses.create(**kwargs)
+        content = response.output_text
         data = json.loads(content)
 
         # Extract token usage and calculate cost

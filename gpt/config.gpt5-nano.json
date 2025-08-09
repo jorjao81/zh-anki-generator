@@ -1,4 +1,7 @@
 {
   "model": "gpt-5-nano",
-  "prompt": "gpt/prompt.md"
+  "prompt": "gpt/prompt.md",
+  "reasoning_effort": "low",
+  "temperature": 0.3,
+  "use_web_search": false
 }
