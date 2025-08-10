@@ -54,6 +54,7 @@ class GptFieldGenerator(FieldGenerator):
         use_web_search: bool = False,
     ) -> None:
         from openai import OpenAI
+        from pathlib import Path
 
         self.client = OpenAI(api_key=api_key) if api_key else OpenAI()
         self.model = model
@@ -61,17 +62,42 @@ class GptFieldGenerator(FieldGenerator):
         self.reasoning_effort = reasoning_effort
         self.temperature = temperature
         self.use_web_search = use_web_search
-        self.prompt = ""
+        
+        # Load both single and multi-character prompts
+        self.single_char_prompt = ""
+        self.multi_char_prompt = ""
+        
         if prompt_path:
+            prompt_path_obj = Path(prompt_path)
+            
+            # Load single character prompt (the default one)
             with open(prompt_path, "r", encoding="utf-8") as f:
-                self.prompt = f.read()
+                self.single_char_prompt = f.read()
 
-            # Load examples from the examples directory if it exists
-            from pathlib import Path
+            # Load multi-character prompt
+            multi_char_path = prompt_path_obj.parent / "prompt_multi_char.md"
+            if multi_char_path.exists():
+                with open(multi_char_path, "r", encoding="utf-8") as f:
+                    self.multi_char_prompt = f.read()
+            else:
+                # Fallback to single char prompt if multi-char doesn't exist
+                self.multi_char_prompt = self.single_char_prompt
 
-            examples_dir = Path(prompt_path).parent / "examples"
-            if examples_dir.exists():
-                self.prompt = self._load_prompt_with_examples(self.prompt, examples_dir)
+            # Load examples from the appropriate examples directories
+            single_examples_dir = prompt_path_obj.parent / "examples_single_char"
+            multi_examples_dir = prompt_path_obj.parent / "examples_multi_char"
+            
+            if single_examples_dir.exists():
+                self.single_char_prompt = self._load_prompt_with_examples(self.single_char_prompt, single_examples_dir)
+            
+            if multi_examples_dir.exists():
+                self.multi_char_prompt = self._load_prompt_with_examples(self.multi_char_prompt, multi_examples_dir)
+            
+            # Fallback to shared examples directory if separate ones don't exist
+            shared_examples_dir = prompt_path_obj.parent / "examples"
+            if shared_examples_dir.exists() and not single_examples_dir.exists() and not multi_examples_dir.exists():
+                self.single_char_prompt = self._load_prompt_with_examples(self.single_char_prompt, shared_examples_dir)
+                self.multi_char_prompt = self._load_prompt_with_examples(self.multi_char_prompt, shared_examples_dir)
 
     def _load_prompt_with_examples(self, base_prompt: str, examples_dir) -> str:
         """Load examples from the examples directory and incorporate them into the prompt."""
@@ -79,6 +105,10 @@ class GptFieldGenerator(FieldGenerator):
         import os
 
         examples_text = "\n\nHere are examples of the expected output format:\n\n"
+        
+        # Determine if this is for single or multi-character examples
+        is_single_char = "single_char" in str(examples_dir)
+        is_multi_char = "multi_char" in str(examples_dir)
 
         # Load all structural decomposition examples
         structural_files = glob.glob(str(examples_dir / "structural_decomposition*.html"))
@@ -89,7 +119,12 @@ class GptFieldGenerator(FieldGenerator):
                 with open(structural_path, "r", encoding="utf-8") as f:
                     structural_content = f.read().strip()
                 if structural_content:
-                    example_name = "忆" if i == 1 else f"example {i}"
+                    if is_single_char:
+                        example_name = "忆" if i == 1 else f"single char example {i}"
+                    elif is_multi_char:
+                        example_name = "学校" if i == 1 else f"multi char example {i}"
+                    else:
+                        example_name = "忆" if i == 1 else f"example {i}"  # fallback for shared examples
                     examples_text += f"**Example structural_decomposition_html for {example_name}:**\n```html\n{structural_content}\n```\n\n"
 
         # Load all etymology examples
@@ -101,7 +136,12 @@ class GptFieldGenerator(FieldGenerator):
                 with open(etymology_path, "r", encoding="utf-8") as f:
                     etymology_content = f.read().strip()
                 if etymology_content:
-                    example_name = "忆" if i == 1 else f"example {i}"
+                    if is_single_char:
+                        example_name = "忆" if i == 1 else f"single char example {i}"
+                    elif is_multi_char:
+                        example_name = "学校" if i == 1 else f"multi char example {i}"
+                    else:
+                        example_name = "忆" if i == 1 else f"example {i}"  # fallback for shared examples
                     examples_text += f"**Example etymology_html for {example_name}:**\n```html\n{etymology_content}\n```\n\n"
 
         examples_text += "Please follow these formats exactly, using the same HTML structure and CSS classes.\n"
@@ -124,12 +164,23 @@ class GptFieldGenerator(FieldGenerator):
 
         return input_cost + output_cost
 
+    def _is_single_character(self, chinese: str) -> bool:
+        """Check if the Chinese text is a single character."""
+        import re
+        # Remove any non-Chinese characters and check if exactly one character remains
+        chinese_chars = re.findall(r'[\u4e00-\u9fff]', chinese)
+        return len(chinese_chars) == 1
+
     def generate(self, chinese: str, pinyin: str) -> FieldGenerationResult:
         import json
 
+        # Choose appropriate prompt based on character count
+        is_single_char = self._is_single_character(chinese)
+        prompt_to_use = self.single_char_prompt if is_single_char else self.multi_char_prompt
+        
         # Create input messages for Responses API
         input_messages = [
-            {"role": "system", "content": self.prompt},
+            {"role": "system", "content": prompt_to_use},
             {
                 "role": "user",
                 "content": json.dumps({"character": chinese, "pinyin": pinyin}, ensure_ascii=False),
@@ -198,17 +249,43 @@ class GeminiFieldGenerator(FieldGenerator):
         
         self.model = model
         self.temperature = temperature
-        self.prompt = ""
+        
+        # Load both single and multi-character prompts
+        self.single_char_prompt = ""
+        self.multi_char_prompt = ""
+        
         if prompt_path:
-            with open(prompt_path, "r", encoding="utf-8") as f:
-                self.prompt = f.read()
-
-            # Load examples from the examples directory if it exists
             from pathlib import Path
+            prompt_path_obj = Path(prompt_path)
+            
+            # Load single character prompt (the default one)
+            with open(prompt_path, "r", encoding="utf-8") as f:
+                self.single_char_prompt = f.read()
 
-            examples_dir = Path(prompt_path).parent / "examples"
-            if examples_dir.exists():
-                self.prompt = self._load_prompt_with_examples(self.prompt, examples_dir)
+            # Load multi-character prompt
+            multi_char_path = prompt_path_obj.parent / "prompt_multi_char.md"
+            if multi_char_path.exists():
+                with open(multi_char_path, "r", encoding="utf-8") as f:
+                    self.multi_char_prompt = f.read()
+            else:
+                # Fallback to single char prompt if multi-char doesn't exist
+                self.multi_char_prompt = self.single_char_prompt
+
+            # Load examples from the appropriate examples directories
+            single_examples_dir = prompt_path_obj.parent / "examples_single_char"
+            multi_examples_dir = prompt_path_obj.parent / "examples_multi_char"
+            
+            if single_examples_dir.exists():
+                self.single_char_prompt = self._load_prompt_with_examples(self.single_char_prompt, single_examples_dir)
+            
+            if multi_examples_dir.exists():
+                self.multi_char_prompt = self._load_prompt_with_examples(self.multi_char_prompt, multi_examples_dir)
+            
+            # Fallback to shared examples directory if separate ones don't exist
+            shared_examples_dir = prompt_path_obj.parent / "examples"
+            if shared_examples_dir.exists() and not single_examples_dir.exists() and not multi_examples_dir.exists():
+                self.single_char_prompt = self._load_prompt_with_examples(self.single_char_prompt, shared_examples_dir)
+                self.multi_char_prompt = self._load_prompt_with_examples(self.multi_char_prompt, shared_examples_dir)
 
         # Initialize the model
         self.genai_model = genai.GenerativeModel(model)
@@ -219,6 +296,10 @@ class GeminiFieldGenerator(FieldGenerator):
         import os
 
         examples_text = "\n\nHere are examples of the expected output format:\n\n"
+        
+        # Determine if this is for single or multi-character examples
+        is_single_char = "single_char" in str(examples_dir)
+        is_multi_char = "multi_char" in str(examples_dir)
 
         # Load all structural decomposition examples
         structural_files = glob.glob(str(examples_dir / "structural_decomposition*.html"))
@@ -229,7 +310,12 @@ class GeminiFieldGenerator(FieldGenerator):
                 with open(structural_path, "r", encoding="utf-8") as f:
                     structural_content = f.read().strip()
                 if structural_content:
-                    example_name = "忆" if i == 1 else f"example {i}"
+                    if is_single_char:
+                        example_name = "忆" if i == 1 else f"single char example {i}"
+                    elif is_multi_char:
+                        example_name = "学校" if i == 1 else f"multi char example {i}"
+                    else:
+                        example_name = "忆" if i == 1 else f"example {i}"  # fallback for shared examples
                     examples_text += f"**Example structural_decomposition_html for {example_name}:**\n```html\n{structural_content}\n```\n\n"
 
         # Load all etymology examples
@@ -241,7 +327,12 @@ class GeminiFieldGenerator(FieldGenerator):
                 with open(etymology_path, "r", encoding="utf-8") as f:
                     etymology_content = f.read().strip()
                 if etymology_content:
-                    example_name = "忆" if i == 1 else f"example {i}"
+                    if is_single_char:
+                        example_name = "忆" if i == 1 else f"single char example {i}"
+                    elif is_multi_char:
+                        example_name = "学校" if i == 1 else f"multi char example {i}"
+                    else:
+                        example_name = "忆" if i == 1 else f"example {i}"  # fallback for shared examples
                     examples_text += f"**Example etymology_html for {example_name}:**\n```html\n{etymology_content}\n```\n\n"
 
         examples_text += "Please follow these formats exactly, using the same HTML structure and CSS classes.\n"
@@ -264,12 +355,23 @@ class GeminiFieldGenerator(FieldGenerator):
 
         return input_cost + output_cost
 
+    def _is_single_character(self, chinese: str) -> bool:
+        """Check if the Chinese text is a single character."""
+        import re
+        # Remove any non-Chinese characters and check if exactly one character remains
+        chinese_chars = re.findall(r'[\u4e00-\u9fff]', chinese)
+        return len(chinese_chars) == 1
+
     def generate(self, chinese: str, pinyin: str) -> FieldGenerationResult:
         import json
 
+        # Choose appropriate prompt based on character count
+        is_single_char = self._is_single_character(chinese)
+        prompt_to_use = self.single_char_prompt if is_single_char else self.multi_char_prompt
+
         # Create the prompt with character and pinyin
         user_input = json.dumps({"character": chinese, "pinyin": pinyin}, ensure_ascii=False)
-        full_prompt = f"{self.prompt}\n\n{user_input}"
+        full_prompt = f"{prompt_to_use}\n\n{user_input}"
 
         # Configure generation parameters
         generation_config = {}

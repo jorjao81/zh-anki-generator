@@ -54,6 +54,7 @@ DOMAIN_MARKERS = {
     r"\btransportation\b": "transportation",
     r"\bzoology\b": "zoology",
     r"\bmedicine\b": "medicine",
+    r"\banatomy\b": "anatomy",
     r"\barcheology\b": "archeology",
 }
 

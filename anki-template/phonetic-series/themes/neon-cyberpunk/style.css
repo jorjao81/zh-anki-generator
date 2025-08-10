@@ -291,6 +291,70 @@ body {
     letter-spacing: 0.5px;
 }
 
+.examples {
+    margin-bottom: 12px;
+}
+
+.example-word {
+    font-size: 0.8rem;
+    margin-bottom: 4px;
+    padding: 4px 8px;
+    background: rgba(0, 255, 255, 0.1);
+    border-radius: 4px;
+    border: 1px solid var(--grid-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: monospace;
+    position: relative;
+    overflow: hidden;
+}
+
+.example-word:last-child {
+    margin-bottom: 0;
+}
+
+.example-word::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.1), transparent);
+    transition: left 0.3s;
+}
+
+.example-word:hover::before {
+    left: 100%;
+}
+
+.example-hanzi {
+    font-weight: 900;
+    color: var(--neon-cyan);
+    min-width: 40px;
+    font-family: 'Microsoft YaHei', sans-serif;
+    text-shadow: 0 0 5px currentColor;
+}
+
+.example-pinyin {
+    font-style: normal;
+    color: var(--neon-pink);
+    min-width: 65px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-family: monospace;
+}
+
+.example-meaning {
+    color: var(--neon-green);
+    font-size: 0.75rem;
+    flex: 1;
+    text-transform: uppercase;
+    font-family: monospace;
+}
+
+
 .analysis {
     font-size: 0.8rem;
     color: var(--electric-blue);
@@ -461,6 +525,157 @@ body {
 }
 
 /* Mobile Cyber Adaptation */
+
+/* Front Card Styles - Neon Cyberpunk Theme */
+.front-card {
+    min-height: 450px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.phonetic-core-front {
+    background: var(--bg-gradient);
+    color: var(--neon-cyan);
+    padding: 70px 45px;
+    border-radius: 20px;
+    margin-bottom: 35px;
+    width: 100%;
+    max-width: 520px;
+    border: 2px solid var(--neon-cyan);
+    box-shadow: var(--neon-glow-cyan);
+    position: relative;
+    overflow: hidden;
+}
+
+.phonetic-core-front::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.1), transparent);
+    animation: scan 3s linear infinite;
+}
+
+@keyframes scan {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+.front-instruction {
+    margin-bottom: 35px;
+    position: relative;
+}
+
+.instruction-text {
+    font-size: 1.3rem;
+    font-weight: 700;
+    opacity: 1;
+    display: block;
+    text-shadow: var(--text-glow);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.core-character-front {
+    margin: 35px 0;
+}
+
+.core-character-front .hanzi-large {
+    font-size: 9rem;
+    font-weight: 900;
+    text-shadow: var(--text-glow-lg);
+    display: block;
+    margin: 0 auto;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.front-hint {
+    margin-top: 25px;
+}
+
+.hint-text {
+    font-size: 1rem;
+    opacity: 0.8;
+    font-style: italic;
+    text-shadow: var(--text-glow);
+}
+
+.character-preview {
+    background: var(--bg-primary);
+    padding: 25px;
+    border-radius: 15px;
+    border: 2px solid var(--neon-purple);
+    box-shadow: var(--neon-glow-purple);
+    max-width: 520px;
+    width: 100%;
+}
+
+.preview-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--neon-purple);
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-shadow: var(--text-glow);
+}
+
+.character-list {
+    display: flex;
+    gap: 18px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.preview-char {
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: var(--neon-cyan);
+    padding: 12px 15px;
+    background: var(--bg-secondary);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 1px solid var(--neon-cyan);
+    text-shadow: var(--text-glow);
+    position: relative;
+    overflow: hidden;
+}
+
+.preview-char::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.2), transparent);
+    transition: left 0.3s ease;
+}
+
+.preview-char:hover {
+    transform: translateY(-3px);
+    background: var(--bg-primary);
+    color: var(--neon-purple);
+    border-color: var(--neon-purple);
+    box-shadow: var(--neon-glow-purple);
+}
+
+.preview-char:hover::before {
+    left: 100%;
+}
+
+
 @media (max-width: 768px) {
     body {
         padding: 10px;

@@ -133,6 +133,45 @@ body {
     font-weight: 400;
 }
 
+.examples {
+    margin-bottom: 6px;
+}
+
+.example-word {
+    font-size: 0.8rem;
+    margin-bottom: 3px;
+    padding: 2px 6px;
+    background: var(--hover-color);
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.example-word:last-child {
+    margin-bottom: 0;
+}
+
+.example-hanzi {
+    font-weight: 600;
+    color: var(--primary-color);
+    min-width: 40px;
+    font-size: 0.8rem;
+}
+
+.example-pinyin {
+    font-style: italic;
+    color: var(--accent-color);
+    min-width: 60px;
+    font-size: 0.75rem;
+}
+
+.example-meaning {
+    color: var(--text-color);
+    font-size: 0.75rem;
+    flex: 1;
+}
+
 .analysis {
     font-size: 0.8rem;
     color: #6b7280;
@@ -242,6 +281,103 @@ body {
 }
 
 /* Mobile Optimization */
+
+/* Front Card Styles - Compact List Theme */
+.front-card {
+    min-height: 350px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.phonetic-core-front {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white;
+    padding: 50px 30px;
+    border-radius: 8px;
+    margin-bottom: 25px;
+    width: 100%;
+    max-width: 450px;
+}
+
+.front-instruction {
+    margin-bottom: 20px;
+}
+
+.instruction-text {
+    font-size: 1.1rem;
+    font-weight: 500;
+    opacity: 0.9;
+    display: block;
+}
+
+.core-character-front {
+    margin: 25px 0;
+}
+
+.core-character-front .hanzi-large {
+    font-size: 7rem;
+    font-weight: 700;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+    display: block;
+    margin: 0 auto;
+}
+
+.front-hint {
+    margin-top: 15px;
+}
+
+.hint-text {
+    font-size: 0.9rem;
+    opacity: 0.7;
+    font-style: italic;
+}
+
+.character-preview {
+    background: white;
+    padding: 18px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    max-width: 450px;
+    width: 100%;
+}
+
+.preview-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 12px;
+}
+
+.character-list {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.preview-char {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    padding: 8px 12px;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border: 1px solid var(--border-color);
+}
+
+.preview-char:hover {
+    transform: translateY(-1px);
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+
 @media (max-width: 480px) {
     body {
         padding: 10px;

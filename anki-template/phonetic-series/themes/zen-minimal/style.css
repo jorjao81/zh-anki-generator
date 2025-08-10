@@ -148,6 +148,51 @@ body {
     letter-spacing: 0.5px;
 }
 
+.examples {
+    margin-bottom: 20px;
+}
+
+.example-word {
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+    padding: 8px 12px;
+    background: var(--light-accent);
+    border-radius: 0;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 300;
+}
+
+.example-word:last-child {
+    margin-bottom: 0;
+    border-bottom: none;
+}
+
+.example-hanzi {
+    font-weight: 400;
+    color: var(--primary-color);
+    min-width: 50px;
+}
+
+.example-pinyin {
+    font-style: normal;
+    color: var(--accent-color);
+    min-width: 80px;
+    font-size: 0.8rem;
+    font-weight: 300;
+    letter-spacing: 0.5px;
+}
+
+.example-meaning {
+    color: var(--subtle-color);
+    font-size: 0.8rem;
+    flex: 1;
+    font-weight: 300;
+}
+
+
 .analysis {
     font-size: 0.75rem;
     color: var(--subtle-color);
@@ -262,6 +307,146 @@ body {
 }
 
 /* Mobile Minimalism */
+
+/* Front Card Styles - Zen Minimal Theme */
+.front-card {
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.phonetic-core-front {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    padding: 80px 50px;
+    border-radius: 0;
+    margin-bottom: 50px;
+    width: 100%;
+    max-width: 500px;
+    border: 1px solid var(--border-subtle);
+    box-shadow: none;
+}
+
+.front-instruction {
+    margin-bottom: 40px;
+}
+
+.instruction-text {
+    font-size: 1rem;
+    font-weight: 300;
+    opacity: 0.8;
+    display: block;
+    letter-spacing: 0.5px;
+}
+
+.core-character-front {
+    margin: 40px 0;
+}
+
+.core-character-front .hanzi-large {
+    font-size: 10rem;
+    font-weight: 100;
+    display: block;
+    margin: 0 auto;
+    color: var(--text-primary);
+}
+
+.front-hint {
+    margin-top: 30px;
+}
+
+.hint-text {
+    font-size: 0.85rem;
+    opacity: 0.6;
+    font-style: italic;
+    font-weight: 300;
+}
+
+.character-preview {
+    background: var(--bg-primary);
+    padding: 40px;
+    border-radius: 0;
+    box-shadow: none;
+    max-width: 500px;
+    width: 100%;
+    border-top: 1px solid var(--border-subtle);
+}
+
+.preview-title {
+    font-size: 0.9rem;
+    font-weight: 400;
+    color: var(--text-secondary);
+    margin-bottom: 30px;
+    letter-spacing: 1px;
+    text-transform: lowercase;
+}
+
+.character-list {
+    display: flex;
+    gap: 30px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.preview-char {
+    font-size: 2.5rem;
+    font-weight: 100;
+    color: var(--text-primary);
+    padding: 15px;
+    background: transparent;
+    border-radius: 0;
+    transition: all 0.5s ease;
+    cursor: pointer;
+    border: none;
+    position: relative;
+}
+
+.preview-char::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 1px;
+    background: var(--text-primary);
+    transition: all 0.5s ease;
+    transform: translateX(-50%);
+}
+
+.preview-char:hover {
+    transform: scale(1.1);
+    opacity: 0.7;
+}
+
+.preview-char:hover::after {
+    width: 100%;
+}
+
+/* Front card responsive styles for zen theme */
+@media (max-width: 768px) {
+    .phonetic-core-front {
+        padding: 60px 30px;
+        margin-bottom: 30px;
+    }
+    
+    .core-character-front .hanzi-large {
+        font-size: 7rem;
+    }
+    
+    .character-list {
+        gap: 20px;
+    }
+    
+    .preview-char {
+        font-size: 2rem;
+        padding: 10px;
+    }
+}
+
+
 @media (max-width: 768px) {
     body {
         padding: 40px 20px;

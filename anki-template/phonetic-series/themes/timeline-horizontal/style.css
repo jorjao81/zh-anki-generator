@@ -180,6 +180,46 @@ body {
     line-height: 1.3;
 }
 
+.examples {
+    margin-bottom: 12px;
+}
+
+.example-word {
+    font-size: 0.85rem;
+    margin-bottom: 4px;
+    padding: 4px 8px;
+    background: var(--light-purple);
+    border-radius: 6px;
+    border-left: 2px solid var(--timeline-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.example-word:last-child {
+    margin-bottom: 0;
+}
+
+.example-hanzi {
+    font-weight: 700;
+    color: var(--timeline-color);
+    min-width: 45px;
+}
+
+.example-pinyin {
+    font-style: italic;
+    color: var(--accent-color);
+    min-width: 75px;
+    font-size: 0.8rem;
+}
+
+.example-meaning {
+    color: var(--text-color);
+    font-size: 0.8rem;
+    flex: 1;
+}
+
+
 .analysis {
     background: var(--light-purple);
     padding: 12px;
@@ -305,6 +345,174 @@ body {
 }
 
 /* Responsive */
+
+/* Front Card Styles - Timeline Horizontal Theme */
+.front-card {
+    min-height: 450px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    position: relative;
+}
+
+.front-card::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--timeline-color);
+    transform: translateY(-50%);
+    z-index: 0;
+}
+
+.phonetic-core-front {
+    background: var(--card-bg);
+    color: var(--text-primary);
+    padding: 60px 45px;
+    border-radius: 12px;
+    margin-bottom: 40px;
+    width: 100%;
+    max-width: 500px;
+    border: 3px solid var(--timeline-color);
+    box-shadow: var(--shadow-elevated);
+    position: relative;
+    z-index: 2;
+}
+
+.phonetic-core-front::before {
+    content: '';
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    width: 30px;
+    height: 30px;
+    background: var(--timeline-color);
+    border-radius: 50%;
+    transform: translateX(-50%);
+    border: 4px solid var(--card-bg);
+}
+
+.front-instruction {
+    margin-bottom: 30px;
+}
+
+.instruction-text {
+    font-size: 1.2rem;
+    font-weight: 600;
+    opacity: 1;
+    display: block;
+    color: var(--timeline-color);
+}
+
+.core-character-front {
+    margin: 30px 0;
+}
+
+.core-character-front .hanzi-large {
+    font-size: 8rem;
+    font-weight: 900;
+    display: block;
+    margin: 0 auto;
+    color: var(--text-primary);
+}
+
+.front-hint {
+    margin-top: 25px;
+}
+
+.hint-text {
+    font-size: 0.95rem;
+    opacity: 0.7;
+    font-style: italic;
+    color: var(--text-secondary);
+}
+
+.character-preview {
+    background: var(--card-bg);
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: var(--shadow-soft);
+    max-width: 500px;
+    width: 100%;
+    border: 2px solid var(--border-color);
+    position: relative;
+    z-index: 2;
+}
+
+.character-preview::before {
+    content: '';
+    position: absolute;
+    bottom: -15px;
+    left: 50%;
+    width: 30px;
+    height: 30px;
+    background: var(--accent-color);
+    border-radius: 50%;
+    transform: translateX(-50%);
+    border: 4px solid var(--card-bg);
+}
+
+.preview-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+}
+
+.character-list {
+    display: flex;
+    gap: 15px;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 10px 0;
+}
+
+.preview-char {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--timeline-color);
+    padding: 12px;
+    background: var(--bg-light);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 2px solid var(--timeline-color);
+    min-width: 60px;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.preview-char::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    background: var(--timeline-color);
+    border-radius: 50%;
+    transform: translateX(-50%);
+    transition: all 0.3s ease;
+}
+
+.preview-char:hover {
+    transform: translateY(-5px);
+    background: var(--timeline-color);
+    color: white;
+    box-shadow: var(--shadow-elevated);
+}
+
+.preview-char:hover::before {
+    background: var(--accent-color);
+    transform: translateX(-50%) scale(1.2);
+}
+
+
 @media (max-width: 768px) {
     body {
         padding: 10px;

@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chinese Learning Card Preview</title>
+    <style>
+/* Chinese Learning Card Theme */
+/* Optimized for mobile and desktop, clean and functional design */
+/* CJK Font Declarations for Comprehensive Character Support */
+/* Import this file in themes to ensure rare character rendering */
+
+/* BabelStone Han - Comprehensive CJK support including Extensions */
+/* Font files should be placed in Anki media collection folder */
+@font-face {
+  font-family: 'BabelStone Han';
+  src: url('_BabelStoneHan.ttf');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+4E00-9FFF, U+3400-4DBF, U+20000-2A6DF, U+2A700-2B73F, U+2B740-2B81F, U+2B820-2CEAF;
+}
+
+/* HanaMin Fonts - Alternative comprehensive CJK support */
+@font-face {
+  font-family: 'HanaMinA';
+  src: url('_HanaMinA.ttf');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+4E00-9FFF, U+3400-4DBF;
+}
+
+@font-face {
+  font-family: 'HanaMinB';
+  src: url('_HanaMinB.ttf');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+20000-2A6DF;
+}
+
+@font-face {
+  font-family: 'HanaMinC';
+  src: url('_HanaMinPlus.ttf');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+2A700-2B73F, U+2B740-2B81F, U+2B820-2CEAF;
+}
+
+/* Noto CJK Fonts - Modern fallback support */
+@font-face {
+  font-family: 'Noto Sans CJK SC';
+  src: url('_NotoSansCJKsc.ttf');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Noto Serif CJK SC';
+  src: url('_NotoSerifCJKsc.ttf');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Comprehensive CJK Font Stack */
+:root {
+  --cjk-font-stack: 'BabelStone Han', 'HanaMinA', 'HanaMinB', 'HanaMinC', 'Noto Sans CJK SC', 'Noto Serif CJK SC', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'SimSun-ExtB', 'MingLiU-ExtB', 'Source Han Sans CN', sans-serif;
+  --cjk-serif-stack: 'BabelStone Han', 'HanaMinA', 'HanaMinB', 'HanaMinC', 'Noto Serif CJK SC', 'Source Han Serif CN', 'Songti SC', 'SimSun', 'SimSun-ExtB', serif;
+  --cjk-mono-stack: 'BabelStone Han', 'HanaMinA', 'HanaMinB', 'Noto Sans Mono CJK SC', 'SF Mono', 'Menlo', 'Consolas', monospace;
+}
+
+/* ===== THEME 1: Minimal Ink =====
+   Clean, high-contrast editorial look
+   Assumes your CJK font stacks exist (:root --cjk-font-stack etc.)
+   Replace your <style> with this block (or paste below your @font-face rules)
+*/
+
+/* Base */
+body {
+  margin: 0;
+  padding: 24px;
+  background: #fafafa;
+  color: #0f172a;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+}
+
+.card {
+  max-width: 560px;
+  margin: 0 auto;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  padding: 20px 22px;
+  box-shadow: 0 1px 0 rgba(15,23,42,0.02), 0 8px 24px rgba(15,23,42,0.06);
+}
+
+/* Header */
+.chinese-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin: 10px 0 8px;
+  flex-wrap: wrap;
+}
+
+.chinese-main {
+  font-family: var(--cjk-font-stack);
+  font-size: 3.6em;
+  font-weight: 600;
+  color: #0b1220;
+  letter-spacing: .02em;
+  line-height: 1.15;
+}
+
+.chinese-side { display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
+.pinyin-main {
+  font-size: 1.05em;
+  font-weight: 600;
+  color: #334155; /* slate */
+  letter-spacing: .06em;
+  font-style: normal;
+}
+
+/* Divider */
+.divider {
+  border: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, #e5e7eb, transparent);
+  margin: 18px 0;
+}
+
+/* Sections */
+h2.section-title {
+  margin: 18px 0 10px;
+  font-size: .85em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .16em;
+  color: #111827;
+  position: relative;
+}
+h2.section-title::after {
+  content:"";
+  display:block;
+  height: 1px;
+  background: #e5e7eb;
+  margin-top: 6px;
+}
+
+.definition-content {
+  font-size: 1.15em;
+  color: #0f172a;
+}
+
+/* Tags */
+.part-of-speech,
+.domain {
+  display:inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: .72em;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  border: 1px solid currentColor;
+  background: transparent;
+}
+.part-of-speech { color:#111827; }
+.domain { color:#6b7280; text-transform: lowercase; font-weight:600; }
+
+/* Examples */
+ul { list-style: none; margin: 14px 0; padding:0; }
+ul li.example {
+  margin: 10px 0;
+  padding: 12px 14px;
+  border: 1px solid #e5e7eb;
+  border-left: 3px solid #111827;
+  border-radius: 10px;
+  background: #fff;
+  font-size: .95em;
+}
+
+.hanzi { font-family:var(--cjk-font-stack); font-weight:600; color:#0f172a; }
+.pinyin { color:#374151; font-style: italic; font-weight:500; }
+.translation { color:#1f2937; font-weight:500; }
+
+/* Components (Structural Analysis) */
+.components-content {
+  display:flex; align-items:center; justify-content:center; flex-wrap:wrap;
+  gap:10px; padding:12px;
+  background:#f8fafc;
+  border: 1px dashed #d1d5db;
+  border-radius:12px;
+}
+.components-content ul { display:flex; flex-wrap:wrap; gap:10px; margin:0; padding:0; }
+.components-content ul li {
+  background:#ffffff;
+  color:#111827;
+  min-width:64px; max-width:120px;
+  padding:10px 12px;
+  border:1px solid #0b1220;
+  border-radius:10px;
+  text-align:center; font-weight:600; font-size:.9em; line-height:1.25;
+  position:relative;
+  box-shadow: 0 1px 0 rgba(15,23,42,.05);
+}
+.components-content ul li:not(:last-child)::after {
+  content:"＋";
+  position:absolute; right:-16px; top:50%; transform:translateY(-50%);
+  color:#9ca3af; font-weight:700;
+}
+.components-content .pinyin { color:#4b5563; font-style:italic; font-size:.78em; margin:0 2px; }
+.components-content .definition { display:block; font-size:.72em; color:#6b7280; font-weight:400; }
+
+/* Etymology copy */
+.etymology-content { font-size:.98em; color:#111827; line-height:1.7; }
+.etymology-content h3 { font-size:1.05em; font-weight:700; color:#111827; margin:14px 0 8px; }
+
+/* Prompt (front) */
+.prompt { font-size:.9em; color:#6b7280; font-style:italic; margin-top:28px; }
+
+/* Mobile */
+@media (max-width: 600px) {
+  .card{ padding:16px; border-radius:16px; }
+  .chinese-header{ flex-direction:column; align-items:flex-start; gap:8px; }
+  .chinese-main{ font-size:3em; }
+  .pinyin-main{ font-size:1em; }
+  ul li.example{ padding:10px 12px; }
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  body { background:#0b1220; color:#e5e7eb; }
+  .card { background:#0f172a; border-color:#1f2937; box-shadow:none; }
+  .chinese-main{ color:#f8fafc; }
+  .pinyin-main{ color:#94a3b8; }
+  .divider{ background:linear-gradient(90deg, transparent, #1f2937, transparent); }
+  h2.section-title{ color:#e5e7eb; }
+  ul li.example{ background:#0b1220; border-color:#1f2937; border-left-color:#e5e7eb; }
+  .components-content{ background:#0b1220; border-color:#334155; }
+  .components-content ul li{ background:#0f172a; border-color:#e5e7eb; }
+}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="card-container">
+            <!-- Front side repeated for context -->
+            <div class="chinese-header">
+                <div class="chinese-main">
+                    唇
+                </div>
+                <div class="chinese-side">
+                    <div class="pinyin-main">
+                        chún
+                    </div>
+                </div>
+            </div>
+
+            <hr class="divider">
+
+            <!-- Back side content -->
+            <div class="definition-section">
+                <h2 class="section-title">Definition</h2>
+                <div class="definition-content">
+                    <span class="part-of-speech">noun</span> lip
+                </div>
+            </div>
+
+            <div class="components-section">
+                <h2 class="section-title">Structural Analysis</h2>
+                <div class="components-content">
+                    <ul>
+                        <li class="semantic"><span class="hanzi">口</span><span class="pinyin">kǒu</span><span
+                                class="definition">mouth; opening</span></li>
+                        <li class="phonetic"><span class="hanzi">辰</span><span class="pinyin">chén</span><span
+                                class="definition">fifth Earthly Branch; time, daybreak (phonetic)</span></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="etymology-section">
+                <h2 class="section-title">Etymology</h2>
+                <div class="etymology-content">
+                    <h3>Origin: Phono-semantic compound (形声字)</h3>
+                    <p><span class="hanzi">唇</span><span class="pinyin">chún</span>is a phono-semantic character analyzed as<b>口
+                            (semantic) + 辰 (phonetic)</b>. The component<span class="hanzi">口</span><span
+                            class="pinyin">kǒu</span>"mouth" indicates the semantic field (a part associated with the mouth),
+                        while<span class="hanzi">辰</span><span class="pinyin">chén</span>provides the sound.</p>
+                    <p>Historical notes: Early and seal forms commonly appear as<span class="hanzi">脣</span>(<span
+                            class="hanzi">肉</span>"flesh" +<span class="hanzi">辰</span>phonetic), emphasizing the lip as a body
+                        part.
+                        The received standard form is<span class="hanzi">唇</span>with the semantic indicator<span
+                            class="hanzi">口</span>. Both are 形声 with<span class="hanzi">辰</span>as the phonetic.</p>
+                    <p>Classical sources: 《說文解字》 glosses the word as "the fleshy part at the border of the mouth," analyzing it
+                        as a
+                        形声字 with<span class="hanzi">辰</span>as phonetic; the 《康熙字典》 records both<span
+                            class="hanzi">脣</span>and<span class="hanzi">唇</span>as interchangeable historical forms. The
+                        漢語多功能字庫 analyzes the structure as<b>⿱辰口</b>(top<span class="hanzi">辰</span>, bottom<span
+                            class="hanzi">口</span>) in the modern graph.</p>
+                    <h3>The Semantic Evolution</h3>
+                    <p><b>"mouth/flesh" (semantic) + "辰" (phonetic)</b>→ "the fleshy rim of the mouth" → modern meaning
+                        "lip(s)."
+                        Common derivatives include:<span class="hanzi">嘴唇</span><span class="pinyin">zuǐchún</span>"lips,"<span
+                            class="hanzi">唇膏</span><span class="pinyin">chúngāo</span>"lipstick," and the set phrase<span
+                            class="hanzi">唇齒相依</span><span class="pinyin">chúnchǐ xiāngyī</span>"lips and teeth mutually
+                        depend."</p>
+                    <h3>Phonetic Series and Sound</h3>
+                    <p><span class="hanzi">辰</span>functions as the phonetic in a family with similar onsets and related
+                        rimes:<span class="hanzi">辰</span><span class="pinyin">chén</span>,<span class="hanzi">晨</span><span
+                            class="pinyin">chén</span>,<span class="hanzi">宸</span><span class="pinyin">chén</span>,<span
+                            class="hanzi">振</span><span class="pinyin">zhèn</span>,<span class="hanzi">娠</span><span
+                            class="pinyin">shēn</span>, and<span class="hanzi">唇</span><span class="pinyin">chún</span>.
+                        The vowel variation (‑en/‑un) reflects historical sound change within the series.</p>
+                    <p class="semantic-evolution-path"><b>Path:</b>口/肉 (mouth, flesh) + 辰 (phonetic) → "fleshy edge of the
+                        mouth" → "lip(s)."</p>
+                </div>
+            </div>
+
+            <div class="similar-section">
+                <h2 class="section-title">Similar Characters</h2>
+                <div class="similar-content">
+                    <p>Characters with similar components or meanings:</p>
+                    <ul>
+                        <li class="example"><span class="hanzi">脣</span> <span class="pinyin">chún</span> <span
+                                class="translation">traditional form of 唇 (lip)</span></li>
+                        <li class="example"><span class="hanzi">辰</span> <span class="pinyin">chén</span> <span
+                                class="translation">fifth Earthly Branch (phonetic component)</span></li>
+                        <li class="example"><span class="hanzi">晨</span> <span class="pinyin">chén</span> <span
+                                class="translation">morning, dawn (same phonetic)</span></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="examples-section">
+                <h2 class="section-title">Examples</h2>
+                <div class="examples-content">
+                    <ul>
+                        <li class="example"><span class="hanzi">上唇</span> <span class="pinyin">shàngchún</span> <span
+                                class="translation">upper lip</span></li>
+                        <li class="example"><span class="hanzi">下唇</span> <span class="pinyin">xiàchún</span> <span
+                                class="translation">lower lip</span></li>
+                        <li class="example"><span class="hanzi">嘴唇</span> <span class="pinyin">zuǐchún</span> <span
+                                class="translation">lip&nbsp;</span></li>
+                        <li class="example"><span class="hanzi">双唇</span> <span class="pinyin">shuāngchún</span> <span
+                                class="translation">two/both lips</span></li>
+                        <li class="example"><span class="hanzi">唇亡齿寒</span> <span class="pinyin">chúnwáng-chǐhán</span> <span
+                                class="translation"><b>idiom</b> If one (of two interdependent things) falls, the other is also in
+                                danger.; share a common lot</span></li>
+                        <li class="example"><span class="hanzi">唇齿</span> <span class="pinyin">chúnchǐ</span> <span
+                                class="translation">(fig.) close partners; interdependent</span></li>
+                        <li class="example"><span class="hanzi">唇齿相依</span> <span class="pinyin">chúnchǐ-xiāngyī</span> <span
+                                class="translation"><b>idiom</b> be as close as lips and teeth; be closely related and mutually
+                                dependent&nbsp;</span></li>
+                        <li class="example"><span class="hanzi">唇膏</span> <span class="pinyin">chúngāo</span> <span
+                                class="translation">lipstick</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
