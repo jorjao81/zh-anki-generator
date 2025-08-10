@@ -1,0 +1,484 @@
+/* Vintage Paper Theme - Aged paper aesthetic with traditional styling */
+:root {
+    --paper-bg: #f4f1e8;
+    --aged-paper: #ede6d3;
+    --ink-black: #2d2922;
+    --sepia-brown: #8b4513;
+    --faded-red: #a0522d;
+    --old-gold: #daa520;
+    --parchment: #fdf6e3;
+    --shadow-brown: rgba(139, 69, 19, 0.2);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Hoefler Text', 'Times New Roman', serif;
+    line-height: 1.6;
+    color: var(--ink-black);
+    background: 
+        radial-gradient(circle at 20% 20%, rgba(139, 69, 19, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 80% 60%, rgba(218, 165, 32, 0.03) 0%, transparent 50%),
+        var(--paper-bg);
+    margin: 0;
+    padding: 30px;
+    position: relative;
+}
+
+/* Paper texture overlay */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 2px,
+            rgba(139, 69, 19, 0.02) 2px,
+            rgba(139, 69, 19, 0.02) 4px
+        );
+    pointer-events: none;
+    z-index: 1;
+}
+
+.card-container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: var(--parchment);
+    border: 3px solid var(--sepia-brown);
+    border-radius: 0;
+    box-shadow: 
+        0 0 20px var(--shadow-brown),
+        inset 0 0 40px rgba(218, 165, 32, 0.1);
+    position: relative;
+    z-index: 2;
+}
+
+/* Ornate border corners */
+.card-container::before,
+.card-container::after {
+    content: '❦';
+    position: absolute;
+    font-size: 2rem;
+    color: var(--old-gold);
+    opacity: 0.6;
+}
+
+.card-container::before {
+    top: 15px;
+    left: 20px;
+}
+
+.card-container::after {
+    bottom: 15px;
+    right: 20px;
+    transform: rotate(180deg);
+}
+
+/* Vintage Header */
+.phonetic-core {
+    background: linear-gradient(135deg, var(--aged-paper), var(--parchment));
+    color: var(--ink-black);
+    padding: 40px;
+    text-align: center;
+    border-bottom: 2px solid var(--sepia-brown);
+    position: relative;
+}
+
+.phonetic-core::before {
+    content: '卷一';
+    position: absolute;
+    top: 15px;
+    left: 40px;
+    font-size: 0.8rem;
+    color: var(--sepia-brown);
+    font-style: italic;
+}
+
+.phonetic-core::after {
+    content: '語學古籍';
+    position: absolute;
+    top: 15px;
+    right: 40px;
+    font-size: 0.8rem;
+    color: var(--sepia-brown);
+    font-style: italic;
+}
+
+.core-character {
+    position: relative;
+}
+
+.hanzi-large {
+    font-size: 4.5rem;
+    font-weight: 400;
+    display: block;
+    margin-bottom: 15px;
+    color: var(--ink-black);
+    text-shadow: 1px 1px 2px var(--shadow-brown);
+    font-family: 'Songti TC', 'STSong', serif;
+}
+
+.core-pronunciation .pinyin {
+    font-size: 1.4rem;
+    font-weight: 300;
+    font-style: italic;
+    color: var(--sepia-brown);
+    letter-spacing: 2px;
+}
+
+.core-meaning {
+    font-size: 1.1rem;
+    margin-top: 10px;
+    color: var(--faded-red);
+    font-style: italic;
+}
+
+/* Classical Section Titles */
+.section-title {
+    font-size: 1.6rem;
+    font-weight: 400;
+    color: var(--ink-black);
+    text-align: center;
+    padding: 30px 0 20px;
+    font-style: italic;
+    position: relative;
+    background: var(--aged-paper);
+    border-bottom: 1px solid var(--sepia-brown);
+}
+
+.section-title::before,
+.section-title::after {
+    content: '◆';
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--old-gold);
+    font-size: 1.2rem;
+}
+
+.section-title::before {
+    left: 30%;
+}
+
+.section-title::after {
+    right: 30%;
+}
+
+.section-subtitle {
+    font-size: 1.3rem;
+    font-weight: 400;
+    color: var(--sepia-brown);
+    margin-bottom: 25px;
+    text-align: center;
+    font-style: italic;
+    position: relative;
+}
+
+.section-subtitle::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 1px;
+    background: var(--old-gold);
+}
+
+/* Traditional Grid */
+.family-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    background: var(--aged-paper);
+    border: 1px solid var(--sepia-brown);
+}
+
+.family-member {
+    background: var(--parchment);
+    border: 1px solid var(--sepia-brown);
+    padding: 25px;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.family-member:hover {
+    background: var(--aged-paper);
+    box-shadow: inset 0 0 15px var(--shadow-brown);
+}
+
+.family-member:nth-child(odd) {
+    border-right: 2px solid var(--sepia-brown);
+}
+
+.character-block {
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px dotted var(--sepia-brown);
+    text-align: center;
+}
+
+.hanzi {
+    font-size: 3rem;
+    font-weight: 400;
+    color: var(--ink-black);
+    display: block;
+    margin-bottom: 8px;
+    font-family: 'Songti TC', 'STSong', serif;
+    text-shadow: 1px 1px 1px var(--shadow-brown);
+}
+
+.pinyin {
+    font-size: 1.1rem;
+    font-weight: 300;
+    color: var(--sepia-brown);
+    font-style: italic;
+    letter-spacing: 1px;
+}
+
+.meaning {
+    font-size: 1rem;
+    color: var(--faded-red);
+    margin-bottom: 12px;
+    font-style: italic;
+    text-align: center;
+}
+
+.analysis {
+    font-size: 0.9rem;
+    color: var(--ink-black);
+    line-height: 1.5;
+    text-align: justify;
+    font-family: serif;
+}
+
+.radical, .phonetic {
+    font-weight: 500;
+    padding: 2px 5px;
+    border-radius: 2px;
+    font-size: 0.85rem;
+    font-style: normal;
+}
+
+.radical {
+    background: rgba(218, 165, 32, 0.2);
+    color: var(--old-gold);
+    border: 1px solid var(--old-gold);
+}
+
+.phonetic {
+    background: rgba(160, 82, 45, 0.2);
+    color: var(--faded-red);
+    border: 1px solid var(--faded-red);
+}
+
+.breakdown {
+    font-size: 0.8rem;
+    color: var(--sepia-brown);
+    margin-top: 6px;
+    font-style: italic;
+}
+
+/* Ancient Evolution */
+.phonetic-evolution {
+    background: var(--aged-paper);
+    padding: 30px 40px;
+    border-top: 2px solid var(--sepia-brown);
+    position: relative;
+}
+
+.phonetic-evolution::before {
+    content: '歷史演變';
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--aged-paper);
+    padding: 0 15px;
+    font-size: 1rem;
+    color: var(--ink-black);
+    font-style: italic;
+}
+
+.evolution-chain {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    text-align: center;
+}
+
+.evolution-step {
+    flex: 1;
+    padding: 0 10px;
+}
+
+.pronunciation-label {
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--sepia-brown);
+    font-style: italic;
+    margin-bottom: 10px;
+    text-transform: lowercase;
+}
+
+.ancient-sound, .middle-sound, .modern-sound {
+    font-size: 1.1rem;
+    font-weight: 400;
+    padding: 8px 12px;
+    border: 2px solid var(--sepia-brown);
+    background: var(--parchment);
+    border-radius: 4px;
+    font-family: serif;
+    font-style: italic;
+}
+
+.ancient-sound {
+    color: var(--old-gold);
+    border-color: var(--old-gold);
+}
+
+.middle-sound {
+    color: var(--faded-red);
+    border-color: var(--faded-red);
+}
+
+.modern-sound {
+    color: var(--ink-black);
+}
+
+.arrow {
+    font-size: 1.5rem;
+    color: var(--sepia-brown);
+    margin: 0 15px;
+    opacity: 0.7;
+}
+
+/* Scholar's Notes */
+.study-notes {
+    background: var(--parchment);
+    padding: 30px 40px;
+    border-top: 1px solid var(--sepia-brown);
+    position: relative;
+}
+
+.study-notes::before {
+    content: '學者按語';
+    position: absolute;
+    top: -12px;
+    left: 40px;
+    background: var(--parchment);
+    padding: 0 15px;
+    font-size: 0.9rem;
+    color: var(--ink-black);
+    font-style: italic;
+}
+
+.memory-tip {
+    background: rgba(218, 165, 32, 0.08);
+    padding: 20px;
+    border: 2px solid var(--old-gold);
+    border-radius: 4px;
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--ink-black);
+    text-align: justify;
+    font-style: italic;
+    position: relative;
+}
+
+.memory-tip::before {
+    content: '"';
+    position: absolute;
+    top: -5px;
+    left: 10px;
+    font-size: 3rem;
+    color: var(--old-gold);
+    opacity: 0.5;
+}
+
+.memory-tip::after {
+    content: '"';
+    position: absolute;
+    bottom: -25px;
+    right: 10px;
+    font-size: 3rem;
+    color: var(--old-gold);
+    opacity: 0.5;
+}
+
+.hanzi-inline {
+    font-weight: 500;
+    color: var(--ink-black);
+    font-size: 1.1em;
+    font-family: 'Songti TC', 'STSong', serif;
+}
+
+/* Mobile Adaptation */
+@media (max-width: 768px) {
+    body {
+        padding: 15px;
+    }
+    
+    .family-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .family-member:nth-child(odd) {
+        border-right: 1px solid var(--sepia-brown);
+        border-bottom: 2px solid var(--sepia-brown);
+    }
+    
+    .evolution-chain {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .arrow {
+        transform: rotate(90deg);
+    }
+}
+
+@media (max-width: 480px) {
+    .hanzi-large {
+        font-size: 3.5rem;
+    }
+    
+    .hanzi {
+        font-size: 2.5rem;
+    }
+    
+    .phonetic-core::before,
+    .phonetic-core::after {
+        display: none;
+    }
+    
+    .section-title::before,
+    .section-title::after {
+        display: none;
+    }
+}
+
+/* Print Styling */
+@media print {
+    body {
+        background: white;
+    }
+    
+    body::before {
+        display: none;
+    }
+    
+    .card-container {
+        border: 2px solid black;
+        box-shadow: none;
+    }
+}

@@ -1,0 +1,351 @@
+/* Zen Minimal Theme - Clean, spacious, contemplative design */
+:root {
+    --primary-color: #2c2c2c;
+    --accent-color: #6b7280;
+    --light-accent: #f3f4f6;
+    --border-color: #e5e7eb;
+    --subtle-color: #9ca3af;
+    --background: #fafafa;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    font-weight: 300;
+    line-height: 1.7;
+    color: var(--primary-color);
+    background: var(--background);
+    margin: 0;
+    padding: 60px 40px;
+    letter-spacing: 0.3px;
+}
+
+.card-container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+}
+
+/* Minimalist Core */
+.phonetic-core {
+    background: white;
+    color: var(--primary-color);
+    padding: 80px 60px;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+    position: relative;
+}
+
+.core-character {
+    position: relative;
+}
+
+.hanzi-large {
+    font-size: 6rem;
+    font-weight: 100;
+    display: block;
+    margin-bottom: 30px;
+    color: var(--primary-color);
+    line-height: 0.9;
+}
+
+.core-pronunciation .pinyin {
+    font-size: 1.2rem;
+    font-weight: 300;
+    letter-spacing: 3px;
+    color: var(--accent-color);
+}
+
+.core-meaning {
+    font-size: 0.95rem;
+    margin-top: 25px;
+    color: var(--subtle-color);
+    font-weight: 300;
+    letter-spacing: 1px;
+}
+
+/* Clean Section Titles */
+.section-title {
+    font-size: 0.9rem;
+    font-weight: 400;
+    color: var(--accent-color);
+    text-align: center;
+    padding: 50px 0 40px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    border: none;
+    background: none;
+}
+
+.section-subtitle {
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: var(--accent-color);
+    margin-bottom: 30px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    text-align: center;
+}
+
+/* Spacious Grid */
+.family-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    padding: 0 60px 60px;
+}
+
+.family-member {
+    background: none;
+    border: none;
+    padding: 0;
+    text-align: center;
+    position: relative;
+    transition: opacity 0.3s ease;
+}
+
+.family-member:hover {
+    opacity: 0.7;
+}
+
+.character-block {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--light-accent);
+}
+
+.hanzi {
+    font-size: 3rem;
+    font-weight: 200;
+    color: var(--primary-color);
+    display: block;
+    margin-bottom: 8px;
+    line-height: 1;
+}
+
+.pinyin {
+    font-size: 0.9rem;
+    font-weight: 300;
+    color: var(--accent-color);
+    letter-spacing: 1px;
+    text-transform: lowercase;
+}
+
+.meaning {
+    font-size: 0.85rem;
+    color: var(--subtle-color);
+    font-weight: 300;
+    margin-bottom: 20px;
+    letter-spacing: 0.5px;
+}
+
+.analysis {
+    font-size: 0.75rem;
+    color: var(--subtle-color);
+    line-height: 1.6;
+    text-align: center;
+}
+
+.radical, .phonetic {
+    font-weight: 400;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+}
+
+.radical {
+    color: var(--primary-color);
+}
+
+.phonetic {
+    color: var(--accent-color);
+}
+
+.breakdown {
+    font-size: 0.7rem;
+    color: var(--subtle-color);
+    margin-top: 8px;
+    font-style: italic;
+    line-height: 1.5;
+}
+
+/* Subtle Evolution */
+.phonetic-evolution {
+    background: none;
+    padding: 40px 60px;
+    text-align: center;
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.evolution-chain {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 40px;
+}
+
+.evolution-step {
+    text-align: center;
+}
+
+.pronunciation-label {
+    font-size: 0.7rem;
+    font-weight: 300;
+    color: var(--subtle-color);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+}
+
+.ancient-sound, .middle-sound, .modern-sound {
+    font-size: 1rem;
+    font-weight: 300;
+    padding: 8px 0;
+    background: none;
+    border: none;
+    color: var(--primary-color);
+}
+
+.arrow {
+    font-size: 1rem;
+    color: var(--subtle-color);
+    font-weight: 100;
+}
+
+/* Contemplative Notes */
+.study-notes {
+    padding: 50px 60px;
+    background: none;
+    text-align: center;
+}
+
+.memory-tip {
+    background: none;
+    padding: 0;
+    border: none;
+    font-size: 0.9rem;
+    line-height: 2;
+    color: var(--primary-color);
+    font-weight: 300;
+    max-width: 500px;
+    margin: 0 auto;
+    text-align: center;
+    letter-spacing: 0.3px;
+}
+
+.hanzi-inline {
+    font-weight: 400;
+    color: var(--primary-color);
+    font-size: 1em;
+}
+
+/* Breathing Space */
+.card-container::before {
+    content: '';
+    display: block;
+    height: 40px;
+}
+
+.card-container::after {
+    content: '';
+    display: block;
+    height: 40px;
+}
+
+/* Mobile Minimalism */
+@media (max-width: 768px) {
+    body {
+        padding: 40px 20px;
+    }
+    
+    .phonetic-core {
+        padding: 60px 40px;
+    }
+    
+    .hanzi-large {
+        font-size: 4rem;
+    }
+    
+    .family-grid {
+        grid-template-columns: 1fr;
+        gap: 40px;
+        padding: 0 40px 40px;
+    }
+    
+    .phonetic-evolution {
+        padding: 30px 40px;
+    }
+    
+    .evolution-chain {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .arrow {
+        transform: rotate(90deg);
+    }
+    
+    .study-notes {
+        padding: 40px;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding: 30px 15px;
+    }
+    
+    .phonetic-core {
+        padding: 50px 30px;
+    }
+    
+    .hanzi-large {
+        font-size: 3.5rem;
+    }
+    
+    .hanzi {
+        font-size: 2.5rem;
+    }
+    
+    .family-grid {
+        padding: 0 30px 30px;
+    }
+    
+    .phonetic-evolution,
+    .study-notes {
+        padding: 30px;
+    }
+}
+
+/* Focus States */
+.family-member:focus,
+.family-member:focus-visible {
+    outline: 1px solid var(--accent-color);
+    outline-offset: 10px;
+}
+
+/* Print Optimization */
+@media print {
+    body {
+        background: white;
+        padding: 20px;
+    }
+    
+    .card-container {
+        border: none;
+        box-shadow: none;
+    }
+    
+    .family-member:hover {
+        opacity: 1;
+    }
+}

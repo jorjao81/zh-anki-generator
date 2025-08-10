@@ -1,0 +1,395 @@
+/* Newspaper Columns Theme - Multi-column newspaper layout */
+:root {
+    --headline-color: #1a1a1a;
+    --accent-color: #dc2626;
+    --text-color: #2d2d2d;
+    --light-gray: #f8f8f8;
+    --border-color: #d4d4d4;
+    --column-bg: #fefefe;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Times New Roman', 'Liberation Serif', serif;
+    line-height: 1.6;
+    color: var(--text-color);
+    background: #ffffff;
+    margin: 0;
+    padding: 25px;
+}
+
+.card-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    background: white;
+    border: 3px solid var(--headline-color);
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Newspaper Header */
+.phonetic-core {
+    background: var(--headline-color);
+    color: white;
+    padding: 20px 30px;
+    text-align: center;
+    border-bottom: 4px solid var(--accent-color);
+    position: relative;
+}
+
+.phonetic-core::before {
+    content: '语言学习日报';
+    position: absolute;
+    top: 8px;
+    left: 30px;
+    font-size: 0.7rem;
+    opacity: 0.7;
+    font-family: sans-serif;
+    letter-spacing: 2px;
+}
+
+.phonetic-core::after {
+    content: 'LANGUAGE DAILY';
+    position: absolute;
+    top: 8px;
+    right: 30px;
+    font-size: 0.7rem;
+    opacity: 0.7;
+    font-family: sans-serif;
+    letter-spacing: 2px;
+}
+
+.core-character {
+    margin-top: 15px;
+}
+
+.hanzi-large {
+    font-size: 4.5rem;
+    font-weight: 900;
+    display: block;
+    font-family: serif;
+    letter-spacing: -2px;
+}
+
+.core-pronunciation .pinyin {
+    font-size: 1.2rem;
+    font-weight: 400;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-family: sans-serif;
+}
+
+.core-meaning {
+    font-size: 1rem;
+    margin-top: 8px;
+    font-style: italic;
+    font-family: serif;
+}
+
+/* Newspaper Section Title */
+.section-title {
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: var(--headline-color);
+    text-align: center;
+    padding: 20px 30px 15px;
+    background: var(--light-gray);
+    border-top: 2px solid var(--accent-color);
+    border-bottom: 1px solid var(--border-color);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: sans-serif;
+}
+
+.section-subtitle {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--headline-color);
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-family: sans-serif;
+    border-bottom: 2px solid var(--accent-color);
+    padding-bottom: 5px;
+}
+
+/* Multi-Column Layout */
+.family-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    background: var(--border-color);
+    padding: 0;
+}
+
+.family-member {
+    background: var(--column-bg);
+    padding: 20px;
+    border: none;
+    position: relative;
+    transition: background-color 0.2s ease;
+}
+
+.family-member:hover {
+    background: var(--light-gray);
+}
+
+/* Column separator lines */
+.family-member:nth-child(odd) {
+    border-right: 1px solid var(--border-color);
+}
+
+.family-member:nth-child(n+3) {
+    border-top: 1px solid var(--border-color);
+}
+
+.character-block {
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px dotted var(--border-color);
+}
+
+.hanzi {
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: var(--headline-color);
+    float: left;
+    margin-right: 15px;
+    margin-top: -5px;
+    line-height: 0.9;
+    font-family: serif;
+}
+
+.pinyin {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--accent-color);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: sans-serif;
+    display: block;
+    margin-bottom: 2px;
+}
+
+.meaning {
+    font-size: 1rem;
+    color: var(--text-color);
+    font-weight: 600;
+    margin-bottom: 10px;
+    text-transform: capitalize;
+    font-family: serif;
+    clear: both;
+}
+
+.analysis {
+    font-size: 0.85rem;
+    color: #555;
+    line-height: 1.5;
+    font-family: serif;
+    text-align: justify;
+    margin-top: 8px;
+}
+
+.radical, .phonetic {
+    font-weight: 700;
+    font-family: sans-serif;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.radical {
+    color: var(--accent-color);
+    text-decoration: underline;
+}
+
+.phonetic {
+    color: var(--headline-color);
+    font-style: italic;
+}
+
+.breakdown {
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 4px;
+    font-style: italic;
+    font-family: serif;
+}
+
+/* Newspaper-style Evolution Box */
+.phonetic-evolution {
+    background: var(--light-gray);
+    padding: 20px 30px;
+    border: 2px solid var(--headline-color);
+    border-left: 6px solid var(--accent-color);
+    margin: 20px 30px;
+    position: relative;
+}
+
+.phonetic-evolution::before {
+    content: '历史发展';
+    position: absolute;
+    top: -10px;
+    left: 15px;
+    background: var(--light-gray);
+    padding: 0 10px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--headline-color);
+    font-family: sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.evolution-chain {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    text-align: center;
+}
+
+.evolution-step {
+    flex: 1;
+}
+
+.pronunciation-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    font-family: sans-serif;
+}
+
+.ancient-sound, .middle-sound, .modern-sound {
+    font-size: 1.1rem;
+    font-weight: 700;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    background: white;
+    font-family: serif;
+}
+
+.ancient-sound {
+    color: #8b5a00;
+}
+
+.middle-sound {
+    color: var(--accent-color);
+}
+
+.modern-sound {
+    color: var(--headline-color);
+}
+
+.arrow {
+    font-size: 1.5rem;
+    color: var(--accent-color);
+    margin: 0 10px;
+    font-family: serif;
+}
+
+/* Study Notes Box */
+.study-notes {
+    background: var(--column-bg);
+    padding: 20px 30px;
+    border-top: 3px solid var(--headline-color);
+}
+
+.memory-tip {
+    background: white;
+    padding: 20px;
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--accent-color);
+    font-family: serif;
+    font-size: 0.95rem;
+    line-height: 1.7;
+    text-align: justify;
+    position: relative;
+}
+
+.memory-tip::before {
+    content: '学习要点';
+    position: absolute;
+    top: -10px;
+    left: 15px;
+    background: white;
+    padding: 0 10px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--headline-color);
+    font-family: sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.hanzi-inline {
+    font-weight: 900;
+    color: var(--headline-color);
+    font-size: 1.1em;
+    font-family: serif;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    body {
+        padding: 15px;
+    }
+    
+    .family-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .family-member:nth-child(odd) {
+        border-right: none;
+    }
+    
+    .family-member:nth-child(n+2) {
+        border-top: 1px solid var(--border-color);
+    }
+    
+    .hanzi {
+        font-size: 2rem;
+        margin-right: 10px;
+    }
+    
+    .evolution-chain {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .arrow {
+        transform: rotate(90deg);
+    }
+    
+    .phonetic-evolution {
+        margin: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .hanzi-large {
+        font-size: 3.5rem;
+    }
+    
+    .phonetic-core::before,
+    .phonetic-core::after {
+        display: none;
+    }
+    
+    .hanzi {
+        font-size: 1.8rem;
+        float: none;
+        display: block;
+        margin-bottom: 5px;
+    }
+    
+    .character-block {
+        text-align: center;
+    }
+}

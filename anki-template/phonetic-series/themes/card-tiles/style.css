@@ -1,0 +1,531 @@
+/* Card Tiles Theme - Playing card/tile-based layout with poker aesthetics */
+:root {
+    --card-red: #dc2626;
+    --card-black: #1f2937;
+    --felt-green: #047857;
+    --gold-accent: #f59e0b;
+    --cream-white: #fef7ed;
+    --card-bg: #ffffff;
+    --shadow-dark: rgba(0, 0, 0, 0.25);
+    --shadow-light: rgba(0, 0, 0, 0.1);
+    --border-radius: 12px;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Playfair Display', 'Times New Roman', serif;
+    line-height: 1.4;
+    color: var(--card-black);
+    background: 
+        radial-gradient(circle at 25% 25%, rgba(4, 120, 87, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 75% 75%, rgba(220, 38, 38, 0.1) 0%, transparent 50%),
+        linear-gradient(45deg, #065f46, #047857);
+    margin: 0;
+    padding: 25px;
+    min-height: 100vh;
+    position: relative;
+}
+
+/* Poker table pattern */
+body::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.1) 1px, transparent 0);
+    background-size: 20px 20px;
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+.card-container {
+    max-width: 950px;
+    margin: 0 auto;
+    background: var(--cream-white);
+    border-radius: var(--border-radius);
+    box-shadow: 
+        0 10px 30px var(--shadow-dark),
+        0 1px 8px var(--shadow-light);
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+}
+
+/* Casino Header */
+.phonetic-core {
+    background: linear-gradient(135deg, var(--card-black), #374151);
+    color: var(--cream-white);
+    padding: 30px;
+    text-align: center;
+    position: relative;
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+}
+
+.phonetic-core::before,
+.phonetic-core::after {
+    content: '♠';
+    position: absolute;
+    top: 15px;
+    font-size: 1.5rem;
+    color: var(--gold-accent);
+    opacity: 0.7;
+}
+
+.phonetic-core::before {
+    left: 30px;
+}
+
+.phonetic-core::after {
+    right: 30px;
+    content: '♥';
+    color: var(--card-red);
+}
+
+.core-character {
+    background: var(--card-bg);
+    color: var(--card-black);
+    padding: 25px;
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 12px var(--shadow-dark);
+    position: relative;
+    margin: 0 20px;
+}
+
+/* Card corner decorations */
+.core-character::before,
+.core-character::after {
+    content: 'A';
+    position: absolute;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--card-red);
+}
+
+.core-character::before {
+    top: 8px;
+    left: 12px;
+}
+
+.core-character::after {
+    bottom: 8px;
+    right: 12px;
+    transform: rotate(180deg);
+    content: 'K';
+    color: var(--card-black);
+}
+
+.hanzi-large {
+    font-size: 4rem;
+    font-weight: 700;
+    display: block;
+    margin-bottom: 12px;
+    color: var(--card-black);
+    text-shadow: 0 2px 4px var(--shadow-light);
+    font-family: 'Noto Serif SC', serif;
+}
+
+.core-pronunciation .pinyin {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--card-red);
+    letter-spacing: 1px;
+    text-transform: lowercase;
+}
+
+.core-meaning {
+    font-size: 1.1rem;
+    margin-top: 10px;
+    color: var(--card-black);
+    font-style: italic;
+}
+
+/* Playing Card Section */
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--felt-green);
+    text-align: center;
+    padding: 25px 0 20px;
+    background: var(--cream-white);
+    position: relative;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.section-title::before,
+.section-title::after {
+    content: '♦';
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gold-accent);
+    font-size: 1.5rem;
+}
+
+.section-title::before {
+    left: 25%;
+}
+
+.section-title::after {
+    right: 25%;
+    content: '♣';
+    color: var(--card-black);
+}
+
+.section-subtitle {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--felt-green);
+    margin-bottom: 20px;
+    text-align: center;
+    font-style: italic;
+}
+
+/* Card Grid Layout */
+.family-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    padding: 20px;
+    background: var(--cream-white);
+}
+
+.family-member {
+    background: var(--card-bg);
+    border: 3px solid var(--card-black);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    box-shadow: 
+        0 6px 15px var(--shadow-dark),
+        0 2px 6px var(--shadow-light);
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.family-member::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, transparent 0%, rgba(245, 158, 11, 0.1) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.family-member:hover {
+    transform: translateY(-5px) scale(1.02);
+    border-color: var(--card-red);
+    box-shadow: 
+        0 15px 30px var(--shadow-dark),
+        0 5px 15px var(--shadow-light);
+}
+
+.family-member:hover::before {
+    opacity: 1;
+}
+
+/* Card corner suit indicators */
+.family-member:nth-child(4n+1)::after { content: '♠'; color: var(--card-black); }
+.family-member:nth-child(4n+2)::after { content: '♥'; color: var(--card-red); }
+.family-member:nth-child(4n+3)::after { content: '♦'; color: var(--card-red); }
+.family-member:nth-child(4n)::after { content: '♣'; color: var(--card-black); }
+
+.family-member::after {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    font-size: 1.2rem;
+    opacity: 0.4;
+    z-index: 1;
+}
+
+.character-block {
+    margin-bottom: 15px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--cream-white);
+    text-align: center;
+    position: relative;
+    z-index: 2;
+}
+
+.hanzi {
+    font-size: 2.8rem;
+    font-weight: 700;
+    color: var(--card-black);
+    display: block;
+    margin-bottom: 8px;
+    font-family: 'Noto Serif SC', serif;
+    text-shadow: 0 1px 3px var(--shadow-light);
+}
+
+.pinyin {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--card-red);
+    text-transform: lowercase;
+    letter-spacing: 0.5px;
+    font-style: italic;
+}
+
+.meaning {
+    font-size: 1rem;
+    color: var(--felt-green);
+    font-weight: 600;
+    margin-bottom: 12px;
+    text-align: center;
+    position: relative;
+    z-index: 2;
+}
+
+.analysis {
+    background: rgba(4, 120, 87, 0.05);
+    padding: 12px;
+    border-radius: 6px;
+    border-left: 3px solid var(--felt-green);
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--card-black);
+    position: relative;
+    z-index: 2;
+}
+
+.radical, .phonetic {
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    display: inline-block;
+    margin: 0 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.radical {
+    background: var(--gold-accent);
+    color: white;
+    border: 2px solid var(--gold-accent);
+}
+
+.phonetic {
+    background: white;
+    color: var(--card-red);
+    border: 2px solid var(--card-red);
+}
+
+.breakdown {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-top: 8px;
+    font-style: italic;
+    text-align: center;
+}
+
+/* Poker Chip Evolution */
+.phonetic-evolution {
+    background: var(--felt-green);
+    color: var(--cream-white);
+    padding: 25px 30px;
+    position: relative;
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+}
+
+.phonetic-evolution::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: repeating-linear-gradient(
+        90deg,
+        var(--gold-accent) 0px,
+        var(--gold-accent) 10px,
+        transparent 10px,
+        transparent 20px
+    );
+}
+
+.section-subtitle {
+    color: var(--cream-white);
+    text-shadow: 0 1px 2px var(--shadow-dark);
+}
+
+.evolution-chain {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    text-align: center;
+    margin-top: 20px;
+}
+
+.evolution-step {
+    background: var(--card-bg);
+    color: var(--card-black);
+    padding: 15px;
+    border-radius: 50%;
+    width: 100px;
+    height: 100px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 
+        0 4px 8px var(--shadow-dark),
+        0 0 0 4px var(--gold-accent);
+    position: relative;
+}
+
+.pronunciation-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--felt-green);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.ancient-sound, .middle-sound, .modern-sound {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--card-black);
+}
+
+.arrow {
+    font-size: 2rem;
+    color: var(--gold-accent);
+    text-shadow: 0 2px 4px var(--shadow-dark);
+}
+
+/* Dealer's Notes */
+.study-notes {
+    background: var(--cream-white);
+    padding: 25px 30px;
+    border-top: 3px solid var(--gold-accent);
+    position: relative;
+}
+
+.study-notes::before {
+    content: 'DEALER\'S NOTES';
+    position: absolute;
+    top: -12px;
+    left: 30px;
+    background: var(--cream-white);
+    padding: 0 15px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--felt-green);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.memory-tip {
+    background: var(--card-bg);
+    padding: 20px;
+    border: 2px solid var(--gold-accent);
+    border-radius: var(--border-radius);
+    box-shadow: 0 2px 8px var(--shadow-light);
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--card-black);
+    position: relative;
+}
+
+.memory-tip::before,
+.memory-tip::after {
+    content: '♤';
+    position: absolute;
+    font-size: 1.5rem;
+    color: var(--gold-accent);
+    opacity: 0.3;
+}
+
+.memory-tip::before {
+    top: 10px;
+    left: 15px;
+}
+
+.memory-tip::after {
+    bottom: 10px;
+    right: 15px;
+    content: '♧';
+}
+
+.hanzi-inline {
+    font-weight: 700;
+    color: var(--card-red);
+    font-size: 1.1em;
+    font-family: 'Noto Serif SC', serif;
+}
+
+/* Mobile Card Table */
+@media (max-width: 768px) {
+    body {
+        padding: 15px;
+    }
+    
+    .family-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .evolution-step {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .evolution-chain {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .arrow {
+        font-size: 1.5rem;
+        order: 1;
+    }
+}
+
+@media (max-width: 480px) {
+    .hanzi-large {
+        font-size: 3rem;
+    }
+    
+    .hanzi {
+        font-size: 2.2rem;
+    }
+    
+    .core-character::before,
+    .core-character::after,
+    .phonetic-core::before,
+    .phonetic-core::after {
+        display: none;
+    }
+    
+    .evolution-step {
+        width: 70px;
+        height: 70px;
+        border-radius: 6px;
+    }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+    .family-member {
+        border-width: 4px;
+    }
+    
+    .radical, .phonetic {
+        border-width: 3px;
+    }
+}

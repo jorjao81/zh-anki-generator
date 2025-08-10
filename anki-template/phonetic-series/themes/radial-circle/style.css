@@ -1,0 +1,375 @@
+/* Radial Circle Theme - Phonetic component in center, characters arranged in circle */
+:root {
+    --center-color: #dc2626;
+    --ring-color: #f59e0b;
+    --accent-color: #059669;
+    --text-color: #1f2937;
+    --light-red: #fef2f2;
+    --light-amber: #fffbeb;
+    --light-green: #f0fdf4;
+    --circle-size: 140px;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Nunito Sans', 'Helvetica Neue', sans-serif;
+    line-height: 1.4;
+    color: var(--text-color);
+    background: radial-gradient(circle at center, #fff7ed, #fef3c7);
+    margin: 0;
+    padding: 20px;
+    min-height: 100vh;
+}
+
+.card-container {
+    max-width: 900px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(220, 38, 38, 0.1);
+    overflow: hidden;
+    position: relative;
+}
+
+/* Hide traditional section titles */
+.section-title {
+    display: none;
+}
+
+/* Central Core */
+.phonetic-core {
+    background: linear-gradient(135deg, var(--center-color), #b91c1c);
+    color: white;
+    padding: 40px;
+    text-align: center;
+    position: relative;
+}
+
+.phonetic-core::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 70% 30%, rgba(255, 255, 255, 0.2) 0%, transparent 60%);
+}
+
+.core-character {
+    position: relative;
+    z-index: 2;
+}
+
+.hanzi-large {
+    font-size: 4rem;
+    font-weight: 800;
+    display: block;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.core-pronunciation .pinyin {
+    font-size: 1.6rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+.core-meaning {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin-top: 15px;
+    font-weight: 300;
+}
+
+/* Radial Family Layout */
+.family-grid {
+    position: relative;
+    min-height: 600px;
+    padding: 60px 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.family-member {
+    position: absolute;
+    width: var(--circle-size);
+    height: var(--circle-size);
+    background: white;
+    border: 3px solid var(--ring-color);
+    border-radius: 50%;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 20px rgba(245, 158, 11, 0.2);
+    cursor: pointer;
+}
+
+.family-member:hover {
+    transform: scale(1.1);
+    border-color: var(--center-color);
+    box-shadow: 0 8px 30px rgba(220, 38, 38, 0.3);
+    z-index: 10;
+}
+
+/* Radial positioning - 6 characters in circle */
+.family-member:nth-child(1) {
+    transform: translate(200px, -250px);
+}
+
+.family-member:nth-child(2) {
+    transform: translate(350px, -50px);
+}
+
+.family-member:nth-child(3) {
+    transform: translate(200px, 150px);
+}
+
+.family-member:nth-child(4) {
+    transform: translate(-200px, 150px);
+}
+
+.family-member:nth-child(5) {
+    transform: translate(-350px, -50px);
+}
+
+.family-member:nth-child(6) {
+    transform: translate(-200px, -250px);
+}
+
+.character-block {
+    margin-bottom: 8px;
+}
+
+.hanzi {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--center-color);
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.pinyin {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--ring-color);
+    text-transform: lowercase;
+}
+
+.meaning {
+    font-size: 0.8rem;
+    color: var(--text-color);
+    font-weight: 500;
+    margin-bottom: 6px;
+    line-height: 1.2;
+}
+
+.analysis {
+    font-size: 0.7rem;
+    color: #6b7280;
+    line-height: 1.2;
+}
+
+.radical, .phonetic {
+    font-weight: 700;
+    padding: 1px 3px;
+    border-radius: 2px;
+    font-size: 0.65rem;
+}
+
+.radical {
+    background: var(--light-amber);
+    color: var(--ring-color);
+}
+
+.phonetic {
+    background: var(--light-red);
+    color: var(--center-color);
+}
+
+.breakdown {
+    font-size: 0.65rem;
+    color: #9ca3af;
+    margin-top: 2px;
+    font-style: italic;
+}
+
+/* Connecting Lines */
+.family-grid::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60px;
+    height: 60px;
+    border: 2px dashed var(--ring-color);
+    border-radius: 50%;
+    opacity: 0.3;
+}
+
+/* Evolution at bottom */
+.phonetic-evolution {
+    background: var(--light-amber);
+    padding: 25px 30px;
+    text-align: center;
+}
+
+.section-subtitle {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--center-color);
+    margin-bottom: 20px;
+}
+
+.evolution-chain {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.evolution-step {
+    background: white;
+    padding: 15px;
+    border-radius: 50px;
+    border: 2px solid var(--ring-color);
+    min-width: 100px;
+    text-align: center;
+}
+
+.pronunciation-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 5px;
+}
+
+.ancient-sound, .middle-sound, .modern-sound {
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 20px;
+}
+
+.ancient-sound {
+    background: var(--light-amber);
+    color: var(--ring-color);
+}
+
+.middle-sound {
+    background: var(--light-red);
+    color: var(--center-color);
+}
+
+.modern-sound {
+    background: var(--light-green);
+    color: var(--accent-color);
+}
+
+.arrow {
+    font-size: 1.5rem;
+    color: var(--ring-color);
+    font-weight: bold;
+}
+
+/* Study Notes */
+.study-notes {
+    padding: 25px 30px;
+    background: white;
+    text-align: center;
+}
+
+.memory-tip {
+    background: var(--light-green);
+    padding: 20px;
+    border-radius: 15px;
+    border: 2px solid var(--accent-color);
+    line-height: 1.6;
+    max-width: 600px;
+    margin: 0 auto;
+    font-size: 0.95rem;
+}
+
+.hanzi-inline {
+    font-weight: 700;
+    color: var(--center-color);
+    font-size: 1.1em;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+    
+    :root {
+        --circle-size: 110px;
+    }
+    
+    .family-grid {
+        min-height: 500px;
+        padding: 40px 20px;
+    }
+    
+    .family-member:nth-child(1) { transform: translate(130px, -180px); }
+    .family-member:nth-child(2) { transform: translate(220px, -30px); }
+    .family-member:nth-child(3) { transform: translate(130px, 120px); }
+    .family-member:nth-child(4) { transform: translate(-130px, 120px); }
+    .family-member:nth-child(5) { transform: translate(-220px, -30px); }
+    .family-member:nth-child(6) { transform: translate(-130px, -180px); }
+    
+    .hanzi {
+        font-size: 1.8rem;
+    }
+    
+    .evolution-chain {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .arrow {
+        transform: rotate(90deg);
+    }
+}
+
+@media (max-width: 480px) {
+    :root {
+        --circle-size: 90px;
+    }
+    
+    .family-grid {
+        min-height: 400px;
+    }
+    
+    .family-member:nth-child(1) { transform: translate(100px, -150px); }
+    .family-member:nth-child(2) { transform: translate(160px, -20px); }
+    .family-member:nth-child(3) { transform: translate(100px, 110px); }
+    .family-member:nth-child(4) { transform: translate(-100px, 110px); }
+    .family-member:nth-child(5) { transform: translate(-160px, -20px); }
+    .family-member:nth-child(6) { transform: translate(-100px, -150px); }
+    
+    .hanzi-large {
+        font-size: 3rem;
+    }
+    
+    .family-member {
+        padding: 15px;
+    }
+    
+    .hanzi {
+        font-size: 1.5rem;
+    }
+}

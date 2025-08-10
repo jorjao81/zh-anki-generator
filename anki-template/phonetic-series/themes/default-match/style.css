@@ -1,0 +1,305 @@
+/* Default Match Theme - Matches existing card styles */
+:root {
+    --primary-color: #2563eb;
+    --light-bg: #dbeafe;
+    --dark-color: #1e40af;
+    --accent-color: #10b981;
+    --light-accent: #d1fae5;
+    --text-color: #374151;
+    --light-gray: #f9fafb;
+    --border-color: #e5e7eb;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans CJK SC', sans-serif;
+    line-height: 1.6;
+    color: var(--text-color);
+    background: linear-gradient(135deg, var(--light-bg) 0%, var(--light-accent) 100%);
+    margin: 0;
+    padding: 20px;
+}
+
+.card-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+/* Phonetic Core */
+.phonetic-core {
+    background: linear-gradient(135deg, var(--primary-color), var(--dark-color));
+    color: white;
+    padding: 40px 30px;
+    text-align: center;
+    position: relative;
+}
+
+.phonetic-core::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+.core-character {
+    position: relative;
+    z-index: 2;
+}
+
+.hanzi-large {
+    font-size: 4rem;
+    font-weight: 700;
+    display: block;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.core-pronunciation .pinyin {
+    font-size: 1.5rem;
+    font-weight: 500;
+}
+
+.core-meaning {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    font-style: italic;
+    margin-top: 15px;
+}
+
+/* Section Titles */
+.section-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--dark-color);
+    margin: 30px 30px 25px;
+    text-align: center;
+    position: relative;
+}
+
+.section-title::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 3px;
+    background: var(--accent-color);
+    border-radius: 2px;
+}
+
+.section-subtitle {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--dark-color);
+    margin-bottom: 15px;
+}
+
+/* Family Grid */
+.family-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    padding: 0 30px 30px;
+}
+
+.family-member {
+    background: white;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.family-member::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--accent-color);
+}
+
+.family-member:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    border-color: var(--primary-color);
+}
+
+.character-block {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 12px;
+}
+
+.hanzi {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--dark-color);
+    min-width: 60px;
+}
+
+.pinyin {
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: var(--primary-color);
+}
+
+.meaning {
+    font-size: 1rem;
+    color: var(--text-color);
+    margin-bottom: 12px;
+    font-weight: 500;
+}
+
+.analysis {
+    background: var(--light-gray);
+    padding: 10px;
+    border-radius: 8px;
+    border-left: 3px solid var(--accent-color);
+}
+
+.radical, .phonetic {
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.radical {
+    background: #fef3c7;
+    color: #f59e0b;
+}
+
+.phonetic {
+    background: var(--light-bg);
+    color: var(--primary-color);
+}
+
+.breakdown {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-top: 5px;
+    font-style: italic;
+}
+
+/* Evolution and Study Notes */
+.phonetic-evolution, .study-notes {
+    padding: 30px;
+    margin: 0 30px 30px;
+}
+
+.phonetic-evolution {
+    background: var(--light-gray);
+    border-radius: 12px;
+}
+
+.evolution-chain {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.evolution-step {
+    text-align: center;
+}
+
+.pronunciation-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+}
+
+.ancient-sound, .middle-sound, .modern-sound {
+    font-size: 1.1rem;
+    font-weight: 700;
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin-top: 8px;
+    display: block;
+}
+
+.ancient-sound {
+    background: #fef3c7;
+    color: #f59e0b;
+}
+
+.middle-sound {
+    background: var(--light-bg);
+    color: var(--primary-color);
+}
+
+.modern-sound {
+    background: var(--light-accent);
+    color: var(--accent-color);
+}
+
+.arrow {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+    font-weight: bold;
+}
+
+.memory-tip {
+    background: linear-gradient(135deg, var(--light-bg), var(--light-accent));
+    padding: 20px;
+    border-radius: 12px;
+    border-left: 4px solid var(--accent-color);
+    line-height: 1.7;
+}
+
+.hanzi-inline {
+    font-weight: 700;
+    color: var(--dark-color);
+    font-size: 1.1em;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+    
+    .hanzi-large {
+        font-size: 3rem;
+    }
+    
+    .family-grid {
+        grid-template-columns: 1fr;
+        padding: 0 15px 20px;
+    }
+    
+    .phonetic-evolution, .study-notes {
+        padding: 20px 15px;
+        margin: 0 15px 20px;
+    }
+    
+    .evolution-chain {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .arrow {
+        transform: rotate(90deg);
+    }
+}

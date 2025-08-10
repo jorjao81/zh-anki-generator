@@ -1,0 +1,506 @@
+/* Neon Cyberpunk Theme - Dark theme with neon colors and futuristic elements */
+:root {
+    --cyber-black: #0a0a0a;
+    --dark-gray: #1a1a1a;
+    --neon-cyan: #00ffff;
+    --neon-pink: #ff0080;
+    --neon-green: #00ff41;
+    --neon-purple: #bf00ff;
+    --electric-blue: #0080ff;
+    --warning-orange: #ff8000;
+    --grid-color: #333;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'JetBrains Mono', 'Monaco', 'Courier New', monospace;
+    line-height: 1.4;
+    color: var(--neon-cyan);
+    background: 
+        linear-gradient(45deg, transparent 24%, var(--grid-color) 25%, var(--grid-color) 26%, transparent 27%, transparent 74%, var(--grid-color) 75%, var(--grid-color) 76%, transparent 77%),
+        linear-gradient(-45deg, transparent 24%, var(--grid-color) 25%, var(--grid-color) 26%, transparent 27%, transparent 74%, var(--grid-color) 75%, var(--grid-color) 76%, transparent 77%),
+        radial-gradient(circle at 30% 40%, rgba(0, 255, 255, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 70% 60%, rgba(255, 0, 128, 0.03) 0%, transparent 50%),
+        var(--cyber-black);
+    background-size: 50px 50px, 50px 50px, 100% 100%, 100% 100%;
+    margin: 0;
+    padding: 20px;
+    min-height: 100vh;
+    animation: subtle-pulse 4s ease-in-out infinite alternate;
+}
+
+@keyframes subtle-pulse {
+    from { background-position: 0 0, 0 0; }
+    to { background-position: 25px 25px, -25px 25px; }
+}
+
+.card-container {
+    max-width: 900px;
+    margin: 0 auto;
+    background: var(--dark-gray);
+    border: 2px solid var(--neon-cyan);
+    border-radius: 12px;
+    box-shadow: 
+        0 0 20px rgba(0, 255, 255, 0.5),
+        0 0 40px rgba(0, 255, 255, 0.2),
+        inset 0 0 20px rgba(0, 255, 255, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Animated border effect */
+.card-container::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, var(--neon-cyan), var(--neon-pink), var(--neon-green), var(--neon-purple));
+    border-radius: 12px;
+    z-index: -1;
+    animation: neon-border 3s linear infinite;
+}
+
+@keyframes neon-border {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Cyber Header */
+.phonetic-core {
+    background: linear-gradient(135deg, var(--cyber-black), var(--dark-gray));
+    color: var(--neon-cyan);
+    padding: 30px;
+    text-align: center;
+    border-bottom: 2px solid var(--neon-pink);
+    position: relative;
+    overflow: hidden;
+}
+
+.phonetic-core::before {
+    content: '> PHONETIC_CORE.EXE';
+    position: absolute;
+    top: 10px;
+    left: 20px;
+    font-size: 0.7rem;
+    color: var(--neon-green);
+    font-family: monospace;
+    opacity: 0.8;
+    animation: code-blink 2s ease-in-out infinite alternate;
+}
+
+@keyframes code-blink {
+    0% { opacity: 0.4; }
+    100% { opacity: 1; }
+}
+
+.phonetic-core::after {
+    content: '[ONLINE]';
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    font-size: 0.7rem;
+    color: var(--neon-green);
+    font-family: monospace;
+    opacity: 0.8;
+}
+
+.core-character {
+    position: relative;
+    z-index: 2;
+}
+
+.hanzi-large {
+    font-size: 4rem;
+    font-weight: 900;
+    display: block;
+    margin-bottom: 15px;
+    color: var(--neon-cyan);
+    text-shadow: 
+        0 0 10px currentColor,
+        0 0 20px currentColor,
+        0 0 30px currentColor;
+    animation: neon-glow 2s ease-in-out infinite alternate;
+    font-family: 'Microsoft YaHei', sans-serif;
+}
+
+@keyframes neon-glow {
+    from { 
+        text-shadow: 
+            0 0 10px currentColor,
+            0 0 20px currentColor,
+            0 0 30px currentColor;
+    }
+    to { 
+        text-shadow: 
+            0 0 5px currentColor,
+            0 0 15px currentColor,
+            0 0 25px currentColor,
+            0 0 35px currentColor;
+    }
+}
+
+.core-pronunciation .pinyin {
+    font-size: 1.3rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--neon-pink);
+    text-shadow: 0 0 10px currentColor;
+}
+
+.core-meaning {
+    font-size: 1rem;
+    margin-top: 10px;
+    color: var(--neon-green);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.9;
+}
+
+/* Cyber Section Titles */
+.section-title {
+    font-size: 1.4rem;
+    font-weight: 900;
+    color: var(--neon-pink);
+    text-align: center;
+    padding: 20px 0;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    background: var(--cyber-black);
+    border-bottom: 1px solid var(--neon-cyan);
+    position: relative;
+    text-shadow: 0 0 10px currentColor;
+}
+
+.section-title::before,
+.section-title::after {
+    content: '◢◣';
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--neon-cyan);
+    font-size: 1rem;
+    animation: pulse-arrows 1.5s ease-in-out infinite alternate;
+}
+
+.section-title::before {
+    left: 20%;
+}
+
+.section-title::after {
+    right: 20%;
+    transform: translateY(-50%) rotate(180deg);
+}
+
+@keyframes pulse-arrows {
+    from { opacity: 0.3; }
+    to { opacity: 1; }
+}
+
+.section-subtitle {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--electric-blue);
+    margin-bottom: 20px;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-shadow: 0 0 8px currentColor;
+}
+
+/* Cyber Grid Layout */
+.family-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    background: var(--neon-cyan);
+    padding: 0;
+}
+
+.family-member {
+    background: var(--cyber-black);
+    padding: 20px;
+    border: 1px solid var(--grid-color);
+    position: relative;
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.family-member::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.1), transparent);
+    transition: left 0.5s;
+}
+
+.family-member:hover {
+    border-color: var(--neon-pink);
+    box-shadow: 
+        0 0 15px rgba(255, 0, 128, 0.3),
+        inset 0 0 15px rgba(255, 0, 128, 0.1);
+}
+
+.family-member:hover::before {
+    left: 100%;
+}
+
+.character-block {
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--grid-color);
+    text-align: center;
+}
+
+.hanzi {
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: var(--neon-cyan);
+    display: block;
+    margin-bottom: 8px;
+    font-family: 'Microsoft YaHei', sans-serif;
+    text-shadow: 0 0 8px currentColor;
+}
+
+.pinyin {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--neon-pink);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: monospace;
+}
+
+.meaning {
+    font-size: 0.9rem;
+    color: var(--neon-green);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.analysis {
+    font-size: 0.8rem;
+    color: var(--electric-blue);
+    line-height: 1.4;
+    font-family: monospace;
+    text-align: center;
+}
+
+.radical, .phonetic {
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    font-family: monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-block;
+    margin: 0 2px;
+}
+
+.radical {
+    background: rgba(0, 255, 65, 0.2);
+    color: var(--neon-green);
+    border: 1px solid var(--neon-green);
+    text-shadow: 0 0 5px currentColor;
+}
+
+.phonetic {
+    background: rgba(191, 0, 255, 0.2);
+    color: var(--neon-purple);
+    border: 1px solid var(--neon-purple);
+    text-shadow: 0 0 5px currentColor;
+}
+
+.breakdown {
+    font-size: 0.75rem;
+    color: var(--warning-orange);
+    margin-top: 5px;
+    font-style: italic;
+    font-family: monospace;
+}
+
+/* Cyber Evolution */
+.phonetic-evolution {
+    background: var(--dark-gray);
+    padding: 25px 30px;
+    border-top: 2px solid var(--neon-green);
+    position: relative;
+}
+
+.phonetic-evolution::before {
+    content: '// SOUND_EVOLUTION.LOG';
+    position: absolute;
+    top: -12px;
+    left: 30px;
+    background: var(--dark-gray);
+    padding: 0 10px;
+    font-size: 0.8rem;
+    color: var(--neon-green);
+    font-family: monospace;
+}
+
+.evolution-chain {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    text-align: center;
+}
+
+.evolution-step {
+    flex: 1;
+    padding: 0 15px;
+}
+
+.pronunciation-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--electric-blue);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    font-family: monospace;
+}
+
+.ancient-sound, .middle-sound, .modern-sound {
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 8px 12px;
+    border: 2px solid;
+    border-radius: 6px;
+    font-family: monospace;
+    text-transform: uppercase;
+    position: relative;
+    overflow: hidden;
+}
+
+.ancient-sound {
+    color: var(--warning-orange);
+    border-color: var(--warning-orange);
+    background: rgba(255, 128, 0, 0.1);
+    text-shadow: 0 0 8px currentColor;
+}
+
+.middle-sound {
+    color: var(--neon-purple);
+    border-color: var(--neon-purple);
+    background: rgba(191, 0, 255, 0.1);
+    text-shadow: 0 0 8px currentColor;
+}
+
+.modern-sound {
+    color: var(--neon-cyan);
+    border-color: var(--neon-cyan);
+    background: rgba(0, 255, 255, 0.1);
+    text-shadow: 0 0 8px currentColor;
+}
+
+.arrow {
+    font-size: 1.5rem;
+    color: var(--neon-pink);
+    margin: 0 10px;
+    text-shadow: 0 0 8px currentColor;
+    animation: arrow-pulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes arrow-pulse {
+    from { opacity: 0.5; }
+    to { opacity: 1; }
+}
+
+/* Cyber Study Notes */
+.study-notes {
+    background: var(--cyber-black);
+    padding: 25px 30px;
+    border-top: 1px solid var(--neon-cyan);
+}
+
+.memory-tip {
+    background: rgba(0, 255, 255, 0.05);
+    padding: 20px;
+    border: 1px solid var(--neon-cyan);
+    border-left: 4px solid var(--neon-pink);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--neon-cyan);
+    font-family: monospace;
+    position: relative;
+    overflow: hidden;
+}
+
+.memory-tip::before {
+    content: '> MEMORY_TIP.TXT';
+    position: absolute;
+    top: 5px;
+    right: 15px;
+    font-size: 0.7rem;
+    color: var(--neon-green);
+    opacity: 0.7;
+}
+
+.hanzi-inline {
+    font-weight: 900;
+    color: var(--neon-pink);
+    font-size: 1.1em;
+    font-family: 'Microsoft YaHei', sans-serif;
+    text-shadow: 0 0 5px currentColor;
+}
+
+/* Mobile Cyber Adaptation */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+        background-size: 25px 25px, 25px 25px, 100% 100%, 100% 100%;
+    }
+    
+    .family-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .evolution-chain {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .arrow {
+        transform: rotate(90deg);
+    }
+}
+
+@media (max-width: 480px) {
+    .hanzi-large {
+        font-size: 3rem;
+    }
+    
+    .hanzi {
+        font-size: 2rem;
+    }
+    
+    .phonetic-core::before,
+    .phonetic-core::after {
+        font-size: 0.6rem;
+    }
+}
+
+/* Disable animations for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
