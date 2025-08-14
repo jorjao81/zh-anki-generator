@@ -1,0 +1,7 @@
+{
+  "api_key": null,
+  "model": "gemini-2.5-flash-lite",
+  "prompt": "gemini/examples_formatter_single_char/prompt.md",
+  "temperature": 0.3,
+  "max_tokens": 400
+}

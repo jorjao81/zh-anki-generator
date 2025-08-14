@@ -6,6 +6,7 @@ import json
 import hashlib
 import os
 import time
+import random
 from collections import Counter
 from pathlib import Path
 from typing import Dict, List, Set, NamedTuple, Optional, Tuple
@@ -37,6 +38,257 @@ except ImportError:
 from .hsk import HSKWordLists
 
 logger = logging.getLogger(__name__)
+
+
+class WordClassification(NamedTuple):
+    """AI-powered classification and definition of a Chinese word."""
+    word: str
+    definition: str  # Short English definition
+    classification: str  # "worth_learning", "compositional", "not_a_word", "proper_name"
+    
+    
+class WordClassifier:
+    """Classify and define Chinese words using AI models."""
+    
+    # Classification categories
+    WORTH_LEARNING = "worth_learning"
+    COMPOSITIONAL = "compositional" 
+    NOT_A_WORD = "not_a_word"
+    PROPER_NAME = "proper_name"
+    
+    def __init__(self, model_type: str = "gpt", model_name: str = "gpt-4o-mini", api_key: Optional[str] = None):
+        """
+        Initialize word classifier.
+        
+        Args:
+            model_type: "gpt" or "gemini"  
+            model_name: Specific model to use (defaults to gpt-4o-mini for reliability)
+            api_key: API key for the service
+            
+        Note:
+            GPT-5 nano may have compatibility issues with structured responses.
+            Use gpt-4o-mini for best reliability and cost balance.
+        """
+        self.model_type = model_type.lower()
+        self.model_name = model_name
+        
+        if self.model_type == "gpt":
+            from openai import OpenAI
+            self.client = OpenAI(api_key=api_key) if api_key else OpenAI()
+            self.pricing = {
+                "gpt-4o": {"input": 2.50, "output": 10.00},
+                "gpt-4o-mini": {"input": 0.15, "output": 0.60}, 
+                "gpt-5-nano": {"input": 0.05, "output": 0.40},
+            }
+        elif self.model_type == "gemini":
+            import google.generativeai as genai
+            genai.configure(api_key=api_key)
+            self.client = genai.GenerativeModel(model_name)
+            self.pricing = {
+                "gemini-2.5-flash": {"input": 0.30, "output": 2.50},
+                "gemini-2.5-flash-lite": {"input": 0.10, "output": 0.40},
+            }
+        else:
+            raise ValueError(f"Unsupported model type: {model_type}")
+    
+    def _get_system_prompt(self) -> str:
+        """Get the system prompt for word classification."""
+        return """You are a Chinese language expert. For each Chinese word provided, give:
+
+1. A very short English definition (1-5 words)
+2. A classification into one of these categories:
+   - worth_learning: Useful standalone vocabulary words
+   - compositional: Multi-character words that are fully compositional (meaning is obvious from parts)
+   - not_a_word: not actually a real word, e.g, grammatical construct, common sequence, etc
+   - proper_name: Proper nouns (people, places, brand names)
+
+Format your response as JSON:
+{"definition": "short definition", "classification": "category"}
+
+Examples:
+车 → {"definition": "car, vehicle", "classification": "worth_learning"}
+汽车 → {"definition": "automobile", "classification": "worth_learning"}  
+火车站 → {"definition": "train station", "classification": "compositional"}
+北京 → {"definition": "Beijing", "classification": "proper_name"}
+这个世界 → {"definition": "this century", "classification": "not_a_word"}"""
+    
+    def classify_word(self, word: str) -> WordClassification:
+        """
+        Classify a single Chinese word.
+        
+        Args:
+            word: Chinese word to classify
+            
+        Returns:
+            WordClassification with definition and category
+        """
+        try:
+            if self.model_type == "gpt":
+                # Try structured responses first, fallback to json_object for unsupported models
+                try:
+                    response = self.client.chat.completions.create(
+                        model=self.model_name,
+                        messages=[
+                            {"role": "system", "content": self._get_system_prompt()},
+                            {"role": "user", "content": word}
+                        ],
+                        max_completion_tokens=200,
+                        response_format={
+                            "type": "json_schema",
+                            "json_schema": {
+                                "name": "word_classification",
+                                "strict": True,
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "definition": {
+                                            "type": "string",
+                                            "description": "Short English definition (1-5 words)"
+                                        },
+                                        "classification": {
+                                            "type": "string",
+                                            "enum": ["worth_learning", "compositional", "not_a_word", "proper_name"],
+                                            "description": "Word classification category"
+                                        }
+                                    },
+                                    "required": ["definition", "classification"],
+                                    "additionalProperties": False
+                                }
+                            }
+                        }
+                    )
+                except Exception as structured_error:
+                    logger.debug(f"Structured responses not supported for {self.model_name}, falling back to json_object: {structured_error}")
+                    # Fallback to simple json_object for models that don't support structured responses
+                    response = self.client.chat.completions.create(
+                        model=self.model_name,
+                        messages=[
+                            {"role": "system", "content": self._get_system_prompt()},
+                            {"role": "user", "content": word}
+                        ],
+                        max_completion_tokens=200,
+                        response_format={"type": "json_object"}
+                    )
+                content = response.choices[0].message.content.strip()
+            else:  # gemini
+                prompt = f"{self._get_system_prompt()}\n\nWord to classify: {word}"
+                response = self.client.generate_content(
+                    prompt,
+                    generation_config={
+                        "temperature": 0.3,
+                        "max_output_tokens": 100,
+                    }
+                )
+                content = response.text.strip()
+            
+            # Parse JSON response
+            import json
+            try:
+                result = json.loads(content)
+                return WordClassification(
+                    word=word,
+                    definition=result.get("definition", "unknown"),
+                    classification=result.get("classification", "worth_learning")
+                )
+            except json.JSONDecodeError:
+                # Fallback if JSON parsing fails
+                logger.warning(f"Failed to parse JSON response for word '{word}': {content}")
+                return WordClassification(
+                    word=word,
+                    definition="unknown",
+                    classification="worth_learning"
+                )
+                
+        except Exception as e:
+            logger.error(f"Error classifying word '{word}': {e}")
+            return WordClassification(
+                word=word,
+                definition="error",
+                classification="worth_learning"
+            )
+    
+    def classify_words_batch(self, words: List[str], max_workers: int = 3) -> List[WordClassification]:
+        """
+        Classify multiple words in parallel.
+        
+        Args:
+            words: List of Chinese words to classify
+            max_workers: Maximum number of concurrent API calls
+            
+        Returns:
+            List of WordClassification results
+        """
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        
+        results = []
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all classification tasks
+            future_to_word = {executor.submit(self.classify_word, word): word for word in words}
+            
+            for future in as_completed(future_to_word):
+                try:
+                    classification = future.result()
+                    results.append(classification)
+                except Exception as e:
+                    word = future_to_word[future]
+                    logger.error(f"Classification failed for word '{word}': {e}")
+                    results.append(WordClassification(
+                        word=word,
+                        definition="error",
+                        classification="worth_learning"
+                    ))
+        
+        # Sort results to match original word order
+        word_to_result = {r.word: r for r in results}
+        return [word_to_result[word] for word in words if word in word_to_result]
+
+
+def _weighted_random_selection(items: List[Tuple[str, int]], max_items: int, length_bonus: float = 0.3) -> List[Tuple[str, int]]:
+    """
+    Select items using weighted random selection based on frequency and length.
+    
+    Args:
+        items: List of (word, frequency) tuples
+        max_items: Maximum number of items to select
+        length_bonus: Bonus multiplier for longer words (e.g., 0.3 = 30% bonus per character)
+    
+    Returns:
+        List of selected (word, frequency) tuples
+    """
+    if not items or max_items <= 0:
+        return []
+    
+    if len(items) <= max_items:
+        return items
+    
+    # Calculate weights: frequency * (1 + length_bonus * length)
+    weights = []
+    for word, freq in items:
+        length_multiplier = 1 + (length_bonus * len(word))
+        weight = freq * length_multiplier
+        weights.append(weight)
+    
+    # Perform weighted random sampling without replacement
+    selected = []
+    available_items = list(items)
+    available_weights = list(weights)
+    
+    for _ in range(min(max_items, len(available_items))):
+        # Use random.choices for weighted selection
+        selected_item = random.choices(available_items, weights=available_weights, k=1)[0]
+        selected_idx = available_items.index(selected_item)
+        
+        # Add to results
+        selected.append(selected_item)
+        
+        # Remove from available items
+        available_items.pop(selected_idx)
+        available_weights.pop(selected_idx)
+        
+        if not available_items:
+            break
+    
+    return selected
 
 
 class VocabularyStats(NamedTuple):
@@ -89,6 +341,7 @@ class BookAnalysis(NamedTuple):
     coverage_targets: Dict[int, CoverageTarget]  # target_percentage -> results
     non_hsk_words: Dict[str, int]  # words not in any HSK level -> frequency
     hsk_learning_targets: List[HSKLearningTarget]  # HSK-based learning suggestions
+    word_classifications: Optional[List[WordClassification]] = None  # AI classifications of top unknown words
 
 
 class ChineseEPUBAnalyzer:
@@ -445,10 +698,9 @@ class ChineseEPUBAnalyzer:
 
         # Log some examples for debugging
         if phrase_frequencies:
-            # Sort by length first (longest first), then by frequency (descending)
-            sorted_phrases = sorted(phrase_frequencies.items(), key=lambda x: (-len(x[0]), -x[1]))
-            top_phrases = sorted_phrases[:10]
-            logger.debug(f"Sample phrases by length: {top_phrases}")
+            # Use weighted random selection for debug sample
+            sample_phrases = _weighted_random_selection(list(phrase_frequencies.items()), 10)
+            logger.debug(f"Sample phrases (weighted random): {sample_phrases}")
 
         return phrase_frequencies
 
@@ -609,8 +861,13 @@ class ChineseEPUBAnalyzer:
                 priority_words.append((word, freq, pinyin, hsk_level))
                 cumulative_freq += freq
 
-            # Sort priority words by length first (longest first), then by frequency
-            priority_words.sort(key=lambda x: (-len(x[0]), -x[1]))
+            # Use weighted random selection instead of strict length-based sorting
+            priority_word_pairs = [(word, freq) for word, freq, _, _ in priority_words]
+            selected_pairs = _weighted_random_selection(priority_word_pairs, len(priority_words))
+            
+            # Rebuild priority_words list with selected order
+            word_to_data = {word: (word, freq, pinyin, hsk_level) for word, freq, pinyin, hsk_level in priority_words}
+            priority_words = [word_to_data[word] for word, freq in selected_pairs]
 
             results[target] = CoverageTarget(
                 target_percentage=target,
@@ -625,17 +882,19 @@ class ChineseEPUBAnalyzer:
         self, unknown_words: Dict[str, int], count: int = 50
     ) -> List[Tuple[str, int, str, Optional[int]]]:
         """
-        Get the most frequent unknown words, sorted by length then frequency.
+        Get the most frequent unknown words using weighted random selection.
 
         Args:
             unknown_words: Dictionary of unknown words with frequencies
             count: Number of words to return
 
         Returns:
-            List of (word, frequency, pinyin, hsk_level) tuples sorted by length then frequency
+            List of (word, frequency, pinyin, hsk_level) tuples selected by weighted randomization
         """
-        # Sort by length first (longest first), then by frequency (descending)
-        sorted_words = sorted(unknown_words.items(), key=lambda x: (-len(x[0]), -x[1]))[:count]
+        # Use weighted random selection instead of strict length-based sorting
+        word_items = list(unknown_words.items())
+        selected_words = _weighted_random_selection(word_items, count)
+        
         return [
             (
                 word,
@@ -643,7 +902,7 @@ class ChineseEPUBAnalyzer:
                 self.get_word_pinyin(word),
                 self.get_word_hsk_level(word),
             )
-            for word, freq in sorted_words
+            for word, freq in selected_words
         ]
 
     def identify_non_hsk_words(self, word_frequencies: Dict[str, int]) -> Dict[str, int]:
@@ -698,8 +957,14 @@ class ChineseEPUBAnalyzer:
                     unknown_at_level.append((word, freq, pinyin))
                     total_word_count += freq
 
-            # Sort by length first (longest first), then by frequency (descending)
-            unknown_at_level.sort(key=lambda x: (-len(x[0]), -x[1]))
+            # Use weighted random selection instead of strict length-based sorting
+            if unknown_at_level:
+                word_freq_pairs = [(word, freq) for word, freq, _ in unknown_at_level]
+                selected_pairs = _weighted_random_selection(word_freq_pairs, len(unknown_at_level))
+                
+                # Rebuild list with pinyin info preserved
+                word_to_data = {word: (word, freq, pinyin) for word, freq, pinyin in unknown_at_level}
+                unknown_at_level = [word_to_data[word] for word, freq in selected_pairs]
 
             # Calculate potential coverage gain
             potential_coverage_gain = (total_word_count / total_words * 100) if total_words > 0 else 0
@@ -723,6 +988,8 @@ class ChineseEPUBAnalyzer:
         min_frequency: int = 1,
         target_coverages: List[int] = [80, 90, 95, 98],
         top_unknown_count: int = 50,
+        classify_words: bool = False,
+        word_classifier: Optional[WordClassifier] = None,
     ) -> BookAnalysis:
         """
         Perform comprehensive analysis of an EPUB file.
@@ -733,6 +1000,8 @@ class ChineseEPUBAnalyzer:
             min_frequency: Minimum frequency threshold for analysis
             target_coverages: List of target coverage percentages
             top_unknown_count: Number of top unknown words to include
+            classify_words: Whether to use AI to classify unknown words
+            word_classifier: WordClassifier instance to use for classification
 
         Returns:
             Complete book analysis results
@@ -781,6 +1050,14 @@ class ChineseEPUBAnalyzer:
         # Calculate HSK learning targets
         hsk_learning_targets = self.calculate_hsk_learning_targets(word_frequencies, known_words)
 
+        # Classify unknown words using AI if requested
+        word_classifications = None
+        if classify_words and word_classifier and high_frequency_unknown:
+            logger.info(f"Classifying {len(high_frequency_unknown)} unknown words using AI...")
+            words_to_classify = [word for word, _, _, _ in high_frequency_unknown]
+            word_classifications = word_classifier.classify_words_batch(words_to_classify)
+            logger.info(f"Word classification complete: {len(word_classifications)} words classified")
+
         logger.info(
             f"Analysis complete: {unique_words} unique words, "
             f"{len(known_words)} known, {len(unknown_words)} unknown, "
@@ -798,4 +1075,5 @@ class ChineseEPUBAnalyzer:
             coverage_targets=coverage_targets,
             non_hsk_words=non_hsk_words,
             hsk_learning_targets=hsk_learning_targets,
+            word_classifications=word_classifications,
         )

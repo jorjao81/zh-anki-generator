@@ -19,7 +19,9 @@ class PlecoTSVParser:
 
         entries = []
         for _, row in df.iterrows():
-            entry = PlecoEntry(chinese=row["chinese"], pinyin=row["pinyin"], definition=row["definition"])
+            # Handle missing definition by using empty string
+            definition = row["definition"] if pd.notna(row["definition"]) else ""
+            entry = PlecoEntry(chinese=row["chinese"], pinyin=row["pinyin"], definition=definition)
             entries.append(entry)
 
         return PlecoCollection(entries=entries)
@@ -32,7 +34,9 @@ class PlecoTSVParser:
 
         entries = []
         for _, row in df.iterrows():
-            entry = PlecoEntry(chinese=row["chinese"], pinyin=row["pinyin"], definition=row["definition"])
+            # Handle missing definition by using empty string
+            definition = row["definition"] if pd.notna(row["definition"]) else ""
+            entry = PlecoEntry(chinese=row["chinese"], pinyin=row["pinyin"], definition=definition)
             entries.append(entry)
 
         return PlecoCollection(entries=entries)

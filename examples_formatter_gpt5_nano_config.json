@@ -1,0 +1,7 @@
+{
+  "api_key": null,
+  "model": "gpt-5-nano",
+  "prompt": "gpt/examples_formatter_single_char/prompt.md",
+  "temperature": 0.3,
+  "max_tokens": 400
+}

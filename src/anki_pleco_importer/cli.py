@@ -20,6 +20,7 @@ from .epub_analyzer import ChineseEPUBAnalyzer, BookAnalysis
 from .anki_parser import AnkiExportParser, AnkiCard
 from .improver import AnkiImprover
 from .llm import GptFieldGenerator, GeminiFieldGenerator
+from .field_formatter import GptFieldFormatter, GeminiFieldFormatter
 
 
 def convert_to_html_format(text: str) -> str:
@@ -445,6 +446,12 @@ def cli() -> None:
 @click.option("--use-gemini", is_flag=True, help="Use Gemini to generate etymology and structural decomposition")
 @click.option("--gemini-config", type=click.Path(exists=True), help="Path to Gemini configuration JSON file")
 @click.option("--gemini-model", default=None, help="Override Gemini model name")
+@click.option("--format-meaning", is_flag=True, help="Use AI to format the Meaning/Definition field")
+@click.option("--meaning-formatter", default=None, help="Formatter type for meaning field (gpt/gemini)")
+@click.option("--meaning-config", type=click.Path(exists=True), help="Path to meaning formatter configuration JSON file")
+@click.option("--format-examples", is_flag=True, help="Use AI to format the Examples field")
+@click.option("--examples-formatter", default=None, help="Formatter type for examples field (gpt/gemini)")
+@click.option("--examples-config", type=click.Path(exists=True), help="Path to examples formatter configuration JSON file")
 @click.option("--dry-run", is_flag=True, help="Show what would be done without making changes")
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.option("--html-output", is_flag=True, help="Show raw HTML output for debugging (default: terminal-formatted)")
@@ -461,6 +468,12 @@ def convert(
     use_gemini: bool,
     gemini_config: Optional[str],
     gemini_model: Optional[str],
+    format_meaning: bool,
+    meaning_formatter: Optional[str],
+    meaning_config: Optional[str],
+    format_examples: bool,
+    examples_formatter: Optional[str],
+    examples_config: Optional[str],
     dry_run: bool,
     verbose: bool,
     html_output: bool,
@@ -587,6 +600,60 @@ def convert(
                     temperature=llm_cfg.get("temperature"),
                 )
 
+            # Initialize field formatters
+            meaning_formatter = None
+            examples_formatter = None
+            
+            if format_meaning:
+                formatter_type = (meaning_formatter or "gpt").lower()  # default to GPT if not specified
+                if formatter_type == "gpt":
+                    if meaning_config:
+                        formatter_cfg = load_llm_config(meaning_config, verbose)
+                    else:
+                        formatter_cfg = {"api_key": None, "model": "gpt-4o-mini"}
+                    meaning_formatter = GptFieldFormatter(
+                        model=formatter_cfg.get("model", "gpt-4o-mini"),
+                        api_key=formatter_cfg.get("api_key"),
+                        prompt_path=formatter_cfg.get("prompt", "gpt/meaning_formatter_single_char/prompt.md"),
+                        temperature=formatter_cfg.get("temperature", 0.3),
+                    )
+                elif formatter_type == "gemini":
+                    if meaning_config:
+                        formatter_cfg = load_llm_config(meaning_config, verbose)
+                    else:
+                        formatter_cfg = {"api_key": None, "model": "gemini-2.5-flash-lite"}
+                    meaning_formatter = GeminiFieldFormatter(
+                        model=formatter_cfg.get("model", "gemini-2.5-flash-lite"),
+                        api_key=formatter_cfg.get("api_key"),
+                        prompt_path=formatter_cfg.get("prompt", "gemini/meaning_formatter_single_char/prompt.md"),
+                        temperature=formatter_cfg.get("temperature", 0.3),
+                    )
+                    
+            if format_examples:
+                formatter_type = (examples_formatter or "gpt").lower()  # default to GPT if not specified
+                if formatter_type == "gpt":
+                    if examples_config:
+                        formatter_cfg = load_llm_config(examples_config, verbose)
+                    else:
+                        formatter_cfg = {"api_key": None, "model": "gpt-4o-mini"}
+                    examples_formatter = GptFieldFormatter(
+                        model=formatter_cfg.get("model", "gpt-4o-mini"),
+                        api_key=formatter_cfg.get("api_key"),
+                        prompt_path=formatter_cfg.get("prompt", "gpt/examples_formatter_single_char/prompt.md"),
+                        temperature=formatter_cfg.get("temperature", 0.3),
+                    )
+                elif formatter_type == "gemini":
+                    if examples_config:
+                        formatter_cfg = load_llm_config(examples_config, verbose)
+                    else:
+                        formatter_cfg = {"api_key": None, "model": "gemini-2.5-flash-lite"}
+                    examples_formatter = GeminiFieldFormatter(
+                        model=formatter_cfg.get("model", "gemini-2.5-flash-lite"),
+                        api_key=formatter_cfg.get("api_key"),
+                        prompt_path=formatter_cfg.get("prompt", "gemini/examples_formatter_single_char/prompt.md"),
+                        temperature=formatter_cfg.get("temperature", 0.3),
+                    )
+
             # Generate GPT fields in parallel if GPT is enabled
             field_results = {}
             if field_generator:
@@ -624,11 +691,55 @@ def convert(
                 if verbose:
                     click.echo(f"GPT field generation completed.")
 
+            # Helper function to check for single characters
+            def is_single_character(chinese: str) -> bool:
+                """Check if the Chinese text is a single character."""
+                import re
+                chinese_chars = re.findall(r'[\u4e00-\u9fff]', chinese)
+                return len(chinese_chars) == 1
+
             for i, entry in enumerate(collection, 1):
                 # Get pre-generated field result
                 field_result = field_results.get(id(entry)) if field_generator else None
 
                 anki_card = pleco_to_anki(entry, anki_parser, pregenerated_result=field_result)
+
+                # Apply field formatting if requested
+                # Skip meaning formatting for single-character words
+                
+                if meaning_formatter and anki_card.meaning and not is_single_character(anki_card.simplified):
+                    try:
+                        if verbose:
+                            click.echo(f"    Formatting meaning field for '{anki_card.simplified}'...")
+                        format_result = meaning_formatter.format_field(anki_card.simplified, anki_card.meaning)
+                        anki_card.meaning = format_result.formatted_content
+                        
+                        # Track usage statistics  
+                        if format_result.token_usage:
+                            total_tokens += format_result.token_usage.total_tokens
+                            total_cost += format_result.token_usage.cost_usd
+                            gpt_calls += 1
+                    except Exception as exc:
+                        if verbose:
+                            click.echo(f"    Warning: Failed to format meaning field: {exc}")
+                elif meaning_formatter and anki_card.meaning and is_single_character(anki_card.simplified) and verbose:
+                    click.echo(f"    Skipping meaning formatting for single character '{anki_card.simplified}'")
+
+                if examples_formatter and anki_card.examples:
+                    try:
+                        if verbose:
+                            click.echo(f"    Formatting examples field for '{anki_card.simplified}'...")
+                        format_result = examples_formatter.format_field(anki_card.simplified, anki_card.examples)
+                        anki_card.examples = format_result.formatted_content
+                        
+                        # Track usage statistics
+                        if format_result.token_usage:
+                            total_tokens += format_result.token_usage.total_tokens
+                            total_cost += format_result.token_usage.cost_usd
+                            gpt_calls += 1
+                    except Exception as exc:
+                        if verbose:
+                            click.echo(f"    Warning: Failed to format examples field: {exc}")
 
                 # Generate audio if requested and not in dry-run mode and not skipped
                 if audio_generator and not dry_run and not anki_card.nohearing:
@@ -773,12 +884,22 @@ def convert(
                         )
                     )
 
-                # Display GPT usage summary
-                if (use_gpt or use_gemini) and gpt_calls > 0:
-                    provider_name = "GPT" if use_gpt else "Gemini"
+                # Display AI usage summary 
+                if (use_gpt or use_gemini or format_meaning or format_examples) and gpt_calls > 0:
+                    services_used = []
+                    if use_gpt:
+                        services_used.append("GPT field generation")
+                    if use_gemini:
+                        services_used.append("Gemini field generation")
+                    if format_meaning:
+                        services_used.append("meaning formatting")
+                    if format_examples:
+                        services_used.append("examples formatting")
+                    
+                    services_str = ", ".join(services_used)
                     click.echo(
                         click.style(
-                            f"{provider_name} Usage: {gpt_calls} calls, {total_tokens:,} tokens, ${total_cost:.4f} total cost",
+                            f"AI Usage ({services_str}): {gpt_calls} calls, {total_tokens:,} tokens, ${total_cost:.4f} total cost",
                             fg="blue",
                         )
                     )
@@ -823,12 +944,22 @@ def convert(
                             )
                         )
 
-                # Display GPT usage summary for dry-run
-                if (use_gpt or use_gemini) and gpt_calls > 0:
-                    provider_name = "GPT" if use_gpt else "Gemini"
+                # Display AI usage summary for dry-run
+                if (use_gpt or use_gemini or format_meaning or format_examples) and gpt_calls > 0:
+                    services_used = []
+                    if use_gpt:
+                        services_used.append("GPT field generation")
+                    if use_gemini:
+                        services_used.append("Gemini field generation")
+                    if format_meaning:
+                        services_used.append("meaning formatting")
+                    if format_examples:
+                        services_used.append("examples formatting")
+                    
+                    services_str = ", ".join(services_used)
                     click.echo(
                         click.style(
-                            f"Dry run: {provider_name} usage - {gpt_calls} calls, {total_tokens:,} tokens, "
+                            f"Dry run: AI usage ({services_str}) - {gpt_calls} calls, {total_tokens:,} tokens, "
                             f"${total_cost:.4f} total cost",
                             fg="blue",
                         )
@@ -1256,6 +1387,16 @@ def missing_hsk(anki_file: Path, count: int, max_level: int, verbose: bool) -> N
     type=click.Path(exists=True, path_type=Path),
     help="File containing additional words to treat as known (one per line)",
 )
+@click.option(
+    "--classify-words",
+    is_flag=True,
+    help="Use AI to classify and define unknown words (requires API key)",
+)
+@click.option(
+    "--classifier-model",
+    default="gpt-4o-mini",
+    help="Model to use for word classification (gpt-4o-mini, gpt-5-nano, gemini-2.5-flash-lite)",
+)
 def analyze_epub(
     epub_file: Path,
     anki_file: Path,
@@ -1265,6 +1406,8 @@ def analyze_epub(
     verbose: bool,
     proper_names_file: Optional[Path],
     known_words_file: Optional[Path],
+    classify_words: bool,
+    classifier_model: str,
 ) -> None:
     """Analyze Chinese vocabulary in an EPUB file against your Anki collection."""
 
@@ -1345,6 +1488,31 @@ def analyze_epub(
             click.echo("  pip install ebooklib hanlp[full]")
             raise click.Abort()
 
+        # Initialize word classifier if requested
+        word_classifier = None
+        if classify_words:
+            click.echo(f"Initializing word classifier ({classifier_model})...")
+            try:
+                from .epub_analyzer import WordClassifier
+                
+                # Determine model type from model name
+                if classifier_model.startswith("gpt"):
+                    model_type = "gpt"
+                elif classifier_model.startswith("gemini"):
+                    model_type = "gemini"
+                else:
+                    model_type = "gpt"  # default
+                
+                word_classifier = WordClassifier(
+                    model_type=model_type,
+                    model_name=classifier_model
+                )
+                click.echo("✅ Word classifier initialized")
+            except Exception as e:
+                click.echo(f"Warning: Failed to initialize word classifier: {e}")
+                click.echo("Continuing without word classification...")
+                classify_words = False
+
         # Analyze EPUB
         click.echo(f"Analyzing EPUB file: {epub_file}")
         analysis = analyzer.analyze_epub(
@@ -1353,10 +1521,12 @@ def analyze_epub(
             min_frequency=min_frequency,
             target_coverages=list(target_coverage),
             top_unknown_count=top_unknown,
+            classify_words=classify_words,
+            word_classifier=word_classifier,
         )
 
         # Generate comprehensive report
-        _generate_epub_analysis_report(analysis, verbose, list(target_coverage))
+        _generate_epub_analysis_report(analysis, verbose, list(target_coverage), top_unknown)
 
     except Exception as e:
         click.echo(f"Error analyzing EPUB: {e}", err=True)
@@ -1367,7 +1537,7 @@ def analyze_epub(
         raise click.Abort()
 
 
-def _generate_epub_analysis_report(analysis: BookAnalysis, verbose: bool, target_coverages: List[int]) -> None:
+def _generate_epub_analysis_report(analysis: BookAnalysis, verbose: bool, target_coverages: List[int], top_unknown: int = 50) -> None:
     """Generate and display comprehensive EPUB analysis report."""
 
     # Header
@@ -1447,35 +1617,124 @@ def _generate_epub_analysis_report(analysis: BookAnalysis, verbose: bool, target
 
     # High-Frequency Unknown Words
     if analysis.high_frequency_unknown:
+        # Calculate how many words to display
+        display_count = min(top_unknown, len(analysis.high_frequency_unknown))
+        
         click.echo(f"\n{click.style('🔥 High-Frequency Unknown Words', fg='red', bold=True)}")
-        click.echo(f"(Top {len(analysis.high_frequency_unknown)} most frequent unknown words)")
+        click.echo(f"(Top {display_count} of {len(analysis.high_frequency_unknown)} most frequent unknown words)")
         click.echo("-" * 80)
 
-        # Table headers
-        click.echo(f"{'Word':>6} {'Pinyin':<15} {'Freq':>6} {'HSK Level':<10}")
-        click.echo("-" * 80)
+        # Display words in a clean table format (show top N as requested)
+        word_data = analysis.high_frequency_unknown[:display_count]
+        
+        # Set up table headers based on whether we have classifications
+        if analysis.word_classifications:
+            # Create a mapping from word to classification
+            word_to_classification = {c.word: c for c in analysis.word_classifications}
+            
+            # Group words by classification
+            from collections import defaultdict
+            grouped_words = defaultdict(list)
+            
+            for word, freq, pinyin, hsk_level in word_data:
+                classification = word_to_classification.get(word)
+                if classification:
+                    grouped_words[classification.classification].append((word, freq, pinyin, hsk_level, classification))
+                else:
+                    grouped_words["unknown"].append((word, freq, pinyin, hsk_level, None))
+            
+            # Show legend for classifications
+            click.echo("Legend: " + click.style("worth", fg="green") + " = worth learning, " +
+                      click.style("composite", fg="yellow") + " = compositional, " +
+                      click.style("name", fg="cyan") + " = proper name, " +
+                      click.style("invalid", fg="red") + " = not a word")
+            click.echo("-" * 90)
+            
+            # Display groups in order of priority
+            classification_order = ["worth_learning", "compositional", "proper_name", "not_a_word", "unknown"]
+            classification_names = {
+                "worth_learning": "🟢 Worth Learning",
+                "compositional": "🟡 Compositional", 
+                "proper_name": "🔵 Proper Names",
+                "not_a_word": "🔴 Invalid/Not Words",
+                "unknown": "⚪ Unclassified"
+            }
+            
+            total_shown = 0
+            for classification_type in classification_order:
+                if classification_type not in grouped_words or not grouped_words[classification_type]:
+                    continue
+                
+                group_words = grouped_words[classification_type]
+                group_count = len(group_words)
+                
+                # Calculate how many to show from this group (proportional to remaining space)
+                remaining_space = display_count - total_shown
+                if remaining_space <= 0:
+                    break
+                    
+                words_to_show = min(group_count, remaining_space)
+                
+                # Show group header
+                click.echo(f"\n{classification_names[classification_type]} ({words_to_show} of {group_count})")
+                click.echo(f"{'Word':>6} {'Pinyin':<12} {'Freq':>6} {'HSK':>8} {'Definition':<20}")
+                click.echo("-" * 65)
+                
+                # Show words from this group
+                for i, (word, freq, pinyin, hsk_level, classification) in enumerate(group_words[:words_to_show]):
+                    hsk_text = f"HSK {hsk_level}" if hsk_level else "non-HSK"
+                    if hsk_level and hsk_level <= 4:
+                        hsk_color = "green"
+                    elif hsk_level:
+                        hsk_color = "yellow"
+                    else:
+                        hsk_color = "red"
+                    
+                    definition = ""
+                    if classification:
+                        definition = classification.definition[:18] + ("..." if len(classification.definition) > 18 else "")
+                    
+                    # Format each column separately to maintain alignment
+                    colored_hsk = click.style(f"{hsk_text:>8}", fg=hsk_color)
+                    
+                    click.echo(f"{word:>6} {pinyin:<12} {freq:>6,} {colored_hsk} {definition:<20}")
+                
+                total_shown += words_to_show
+                
+                # Show truncation message if there are more words in this group
+                if group_count > words_to_show:
+                    remaining_in_group = group_count - words_to_show
+                    click.echo(f"  ... and {remaining_in_group} more {classification_type.replace('_', ' ')} words")
+        else:
+            # Original table headers and display without classifications
+            click.echo(f"{'Word':>6} {'Pinyin':<15} {'Freq':>6} {'HSK Level':<10}")
+            click.echo("-" * 80)
+            
+            for word, freq, pinyin, hsk_level in word_data:
+                hsk_text = f"HSK {hsk_level}" if hsk_level else "non-HSK"
+                if hsk_level and hsk_level <= 4:
+                    hsk_color = "green"
+                elif hsk_level:
+                    hsk_color = "yellow"
+                else:
+                    hsk_color = "red"
+                    
+                # Format with proper alignment by applying color to pre-sized text
+                colored_hsk = click.style(f"{hsk_text:<10}", fg=hsk_color)
+                click.echo(f"{word:>6} {pinyin:<15} {freq:>6,} {colored_hsk}")
 
-        # Display words in a clean table format (show top 20)
-        for word, freq, pinyin, hsk_level in analysis.high_frequency_unknown[:20]:
-            hsk_text = f"HSK {hsk_level}" if hsk_level else "non-HSK"
-            if hsk_level and hsk_level <= 4:
-                hsk_color = "green"
-            elif hsk_level:
-                hsk_color = "yellow"
+        # Show count if truncated (only for non-grouped display)
+        if not analysis.word_classifications and len(analysis.high_frequency_unknown) > display_count:
+            remaining = len(analysis.high_frequency_unknown) - display_count
+            click.echo(f"\n  ... and {remaining} more words " f"(increase --top-unknown to see more)")
+        elif analysis.word_classifications:
+            # For grouped display, show total summary
+            total_available = len(analysis.high_frequency_unknown)
+            if total_available > display_count:
+                remaining = total_available - display_count
+                click.echo(f"\n📊 Showing {display_count} of {total_available} total words (increase --top-unknown to see more)")
             else:
-                hsk_color = "red"
-
-            # Format without color first to get proper alignment
-            formatted_line = f"{word:>6} {pinyin:<15} {freq:>6,} {hsk_text:<10}"
-            # Replace the HSK text with colored version
-            colored_hsk = click.style(hsk_text, fg=hsk_color)
-            formatted_line = formatted_line.replace(hsk_text, colored_hsk)
-            click.echo(formatted_line)
-
-        # Show count if truncated
-        if len(analysis.high_frequency_unknown) > 20:
-            remaining = len(analysis.high_frequency_unknown) - 20
-            click.echo(f"\n  ... and {remaining} more words " "(use --verbose for full list)")
+                click.echo(f"\n📊 Showing all {total_available} classified words")
 
     # Detailed Priority Learning Lists (verbose mode)
     if verbose and analysis.coverage_targets:
@@ -1489,8 +1748,8 @@ def _generate_epub_analysis_report(analysis: BookAnalysis, verbose: bool, target
                 click.echo(f"\n{click.style(f'For {highest_target_pct}% coverage:', fg='cyan', bold=True)}")
                 click.echo(f"Learn these {len(target.priority_words)} words:")
 
-                # Limit output to first 50 words for readability in table format
-                display_words = target.priority_words[:50]
+                # Limit output to user-specified number of words
+                display_words = target.priority_words[:top_unknown]
 
                 # Table headers
                 click.echo("-" * 80)
@@ -1507,16 +1766,13 @@ def _generate_epub_analysis_report(analysis: BookAnalysis, verbose: bool, target
                     else:
                         hsk_color = "red"
 
-                    # Format without color first to get proper alignment
-                    formatted_line = f"{word:>6} {pinyin:<15} {freq:>6,} {hsk_text:<10}"
-                    # Replace the HSK text with colored version
-                    colored_hsk = click.style(hsk_text, fg=hsk_color)
-                    formatted_line = formatted_line.replace(hsk_text, colored_hsk)
-                    click.echo(formatted_line)
+                    # Format with proper alignment by applying color to pre-sized text
+                    colored_hsk = click.style(f"{hsk_text:<10}", fg=hsk_color)
+                    click.echo(f"{word:>6} {pinyin:<15} {freq:>6,} {colored_hsk}")
 
                 # Show truncation message if there are more words
-                if len(target.priority_words) > 50:
-                    remaining = len(target.priority_words) - 50
+                if len(target.priority_words) > top_unknown:
+                    remaining = len(target.priority_words) - top_unknown
                     click.echo(f"  ... and {remaining} more words")
 
     # HSK Learning Targets
@@ -1533,8 +1789,9 @@ def _generate_epub_analysis_report(analysis: BookAnalysis, verbose: bool, target
                 )
                 click.echo(f"  Words to learn: {len(target.unknown_words)}")
 
-                # Show top 10 words for each level
-                display_words = target.unknown_words[:10]
+                # Show proportional number of words per level (max 20% of total requested)
+                hsk_display_count = min(max(10, top_unknown // 5), 20)
+                display_words = target.unknown_words[:hsk_display_count]
                 click.echo("-" * 60)
                 click.echo(f"{'Word':>6} {'Pinyin':<15} {'Freq':>6}")
                 click.echo("-" * 60)
@@ -1543,8 +1800,8 @@ def _generate_epub_analysis_report(analysis: BookAnalysis, verbose: bool, target
                     click.echo(f"{word:>6} {pinyin:<15} {freq:>6,}")
 
                 # Show truncation message if there are more words
-                if len(target.unknown_words) > 10:
-                    remaining = len(target.unknown_words) - 10
+                if len(target.unknown_words) > hsk_display_count:
+                    remaining = len(target.unknown_words) - hsk_display_count
                     click.echo(f"\n  ... and {remaining} more HSK {target.level} words")
 
     click.echo()
