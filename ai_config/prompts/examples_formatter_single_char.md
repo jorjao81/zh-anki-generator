@@ -1,12 +1,7 @@
 ## Input Format
 You will receive:
-- **Chinese word/character**: The target word being exemplified
+- **Chinese character**: The target character being exemplified
 - **Original content**: The raw examples from Pleco export (Chinese text, pinyin, English translations mixed together)
-
-## Input Format
-You will receive:
-- **Chinese word**: The multi-character target word being exemplified  
-- **Original content**: Raw examples from Pleco export
 
 Format the content so it looks like the exemples:
 

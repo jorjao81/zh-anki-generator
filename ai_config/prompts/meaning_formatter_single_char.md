@@ -1,6 +1,6 @@
 ## Input Format
 You will receive:
-- **Chinese word**: The multi-character Chinese word/phrase being defined
+- **Chinese character**: The single Chinese character being defined
 - **Original content**: The raw definition/meaning from Pleco export
 
 Format the content so it looks like the exemples:

@@ -19,8 +19,11 @@ from .hsk import HSKWordLists
 from .epub_analyzer import ChineseEPUBAnalyzer, BookAnalysis
 from .anki_parser import AnkiExportParser, AnkiCard
 from .improver import AnkiImprover
-from .llm import GptFieldGenerator, GeminiFieldGenerator
-from .field_formatter import GptFieldFormatter, GeminiFieldFormatter
+from .unified_field_generator import create_field_generator
+from .unified_field_formatter import create_meaning_formatter, create_examples_formatter
+from .unified_word_classifier import create_word_classifier
+from .ai_config import AIConfigLoader
+from .interactive_learner import create_interactive_learner
 
 
 def convert_to_html_format(text: str) -> str:
@@ -440,18 +443,9 @@ def cli() -> None:
     type=click.Path(),
     help="Directory to copy selected audio files to",
 )
-@click.option("--use-gpt", is_flag=True, help="Use GPT to generate etymology and structural decomposition")
-@click.option("--gpt-config", type=click.Path(exists=True), help="Path to GPT configuration JSON file")
-@click.option("--gpt-model", default=None, help="Override GPT model name")
-@click.option("--use-gemini", is_flag=True, help="Use Gemini to generate etymology and structural decomposition")
-@click.option("--gemini-config", type=click.Path(exists=True), help="Path to Gemini configuration JSON file")
-@click.option("--gemini-model", default=None, help="Override Gemini model name")
-@click.option("--format-meaning", is_flag=True, help="Use AI to format the Meaning/Definition field")
-@click.option("--meaning-formatter", default=None, help="Formatter type for meaning field (gpt/gemini)")
-@click.option("--meaning-config", type=click.Path(exists=True), help="Path to meaning formatter configuration JSON file")
-@click.option("--format-examples", is_flag=True, help="Use AI to format the Examples field")
-@click.option("--examples-formatter", default=None, help="Formatter type for examples field (gpt/gemini)")
-@click.option("--examples-config", type=click.Path(exists=True), help="Path to examples formatter configuration JSON file")
+@click.option("--ai-config", type=click.Path(exists=True), help="Path to AI configuration YAML file (default: ai_config/ai_config.yaml)")
+@click.option("--use-ai-fields", is_flag=True, help="Enable AI-powered field generation (etymology and structural decomposition)")
+@click.option("--use-ai-formatting", is_flag=True, help="Enable AI-powered field formatting (meaning and examples)")
 @click.option("--dry-run", is_flag=True, help="Show what would be done without making changes")
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.option("--html-output", is_flag=True, help="Show raw HTML output for debugging (default: terminal-formatted)")
@@ -462,27 +456,16 @@ def convert(
     audio_config: Optional[str],
     audio_cache_dir: str,
     audio_dest_dir: Optional[str],
-    use_gpt: bool,
-    gpt_config: Optional[str],
-    gpt_model: Optional[str],
-    use_gemini: bool,
-    gemini_config: Optional[str],
-    gemini_model: Optional[str],
-    format_meaning: bool,
-    meaning_formatter: Optional[str],
-    meaning_config: Optional[str],
-    format_examples: bool,
-    examples_formatter: Optional[str],
-    examples_config: Optional[str],
+    ai_config: Optional[str],
+    use_ai_fields: bool,
+    use_ai_formatting: bool,
     dry_run: bool,
     verbose: bool,
     html_output: bool,
 ) -> None:
     """Convert Pleco flashcard exports to Anki-compatible format."""
     
-    # Check for mutually exclusive LLM options
-    if use_gpt and use_gemini:
-        raise click.ClickException("Cannot use both --use-gpt and --use-gemini at the same time. Choose one.")
+    # No need for mutually exclusive checks with unified AI config
 
     # Configure logging level
     import logging
@@ -571,125 +554,65 @@ def convert(
             click.echo()
 
             anki_cards = []
-            anki_parser = AnkiExportParser()
-            cards = anki_parser.parse_file(Path("Chinese.txt"))
-            print(len(cards))
+            cards = []
+            
+            # Try to parse Chinese.txt if it exists, but don't fail if it doesn't
+            chinese_file = Path("Chinese.txt")
+            if chinese_file.exists():
+                try:
+                    anki_parser = AnkiExportParser()
+                    cards = anki_parser.parse_file(chinese_file)
+                    if verbose:
+                        click.echo(f"Loaded {len(cards)} Anki cards from {chinese_file}")
+                except Exception as e:
+                    click.echo(click.style(f"Warning: Failed to parse {chinese_file}: {e}", fg="yellow"))
+                    cards = []
+            elif verbose:
+                click.echo(f"Note: {chinese_file} not found, proceeding without existing Anki cards")
             field_generator = None
 
-            # Track GPT usage statistics
-            total_tokens = 0
-            total_cost = 0.0
-            gpt_calls = 0
-
-            if use_gpt:
-                llm_cfg = load_llm_config(gpt_config, verbose)
-                model_name = str(gpt_model or llm_cfg.get("model", "gpt-4o-mini"))
-                field_generator = GptFieldGenerator(
-                    model=model_name,
-                    api_key=llm_cfg.get("api_key"),
-                    prompt_path=llm_cfg.get("prompt"),
-                    thinking=llm_cfg.get("thinking"),
-                )
-            elif use_gemini:
-                llm_cfg = load_llm_config(gemini_config, verbose)
-                model_name = str(gemini_model or llm_cfg.get("model", "gemini-2.5-flash-lite"))
-                field_generator = GeminiFieldGenerator(
-                    model=model_name,
-                    api_key=llm_cfg.get("api_key"),
-                    prompt_path=llm_cfg.get("prompt"),
-                    temperature=llm_cfg.get("temperature"),
-                )
-
-            # Initialize field formatters
+            # Initialize AI configuration loader
+            config_loader = AIConfigLoader(ai_config) if ai_config else AIConfigLoader()
+            
+            # Initialize AI components
+            field_generator = None
             meaning_formatter = None
             examples_formatter = None
             
-            if format_meaning:
-                formatter_type = (meaning_formatter or "gpt").lower()  # default to GPT if not specified
-                if formatter_type == "gpt":
-                    if meaning_config:
-                        formatter_cfg = load_llm_config(meaning_config, verbose)
-                    else:
-                        formatter_cfg = {"api_key": None, "model": "gpt-4o-mini"}
-                    meaning_formatter = GptFieldFormatter(
-                        model=formatter_cfg.get("model", "gpt-4o-mini"),
-                        api_key=formatter_cfg.get("api_key"),
-                        prompt_path=formatter_cfg.get("prompt", "gpt/meaning_formatter_single_char/prompt.md"),
-                        temperature=formatter_cfg.get("temperature", 0.3),
-                    )
-                elif formatter_type == "gemini":
-                    if meaning_config:
-                        formatter_cfg = load_llm_config(meaning_config, verbose)
-                    else:
-                        formatter_cfg = {"api_key": None, "model": "gemini-2.5-flash-lite"}
-                    meaning_formatter = GeminiFieldFormatter(
-                        model=formatter_cfg.get("model", "gemini-2.5-flash-lite"),
-                        api_key=formatter_cfg.get("api_key"),
-                        prompt_path=formatter_cfg.get("prompt", "gemini/meaning_formatter_single_char/prompt.md"),
-                        temperature=formatter_cfg.get("temperature", 0.3),
-                    )
+            # Track AI usage statistics
+            total_tokens = 0
+            total_cost = 0.0
+            ai_calls = 0
+            
+            if use_ai_fields:
+                field_generator = create_field_generator(config_loader)
+                if verbose:
+                    click.echo("Field generator initialized from AI config")
                     
-            if format_examples:
-                formatter_type = (examples_formatter or "gpt").lower()  # default to GPT if not specified
-                if formatter_type == "gpt":
-                    if examples_config:
-                        formatter_cfg = load_llm_config(examples_config, verbose)
-                    else:
-                        formatter_cfg = {"api_key": None, "model": "gpt-4o-mini"}
-                    examples_formatter = GptFieldFormatter(
-                        model=formatter_cfg.get("model", "gpt-4o-mini"),
-                        api_key=formatter_cfg.get("api_key"),
-                        prompt_path=formatter_cfg.get("prompt", "gpt/examples_formatter_single_char/prompt.md"),
-                        temperature=formatter_cfg.get("temperature", 0.3),
-                    )
-                elif formatter_type == "gemini":
-                    if examples_config:
-                        formatter_cfg = load_llm_config(examples_config, verbose)
-                    else:
-                        formatter_cfg = {"api_key": None, "model": "gemini-2.5-flash-lite"}
-                    examples_formatter = GeminiFieldFormatter(
-                        model=formatter_cfg.get("model", "gemini-2.5-flash-lite"),
-                        api_key=formatter_cfg.get("api_key"),
-                        prompt_path=formatter_cfg.get("prompt", "gemini/examples_formatter_single_char/prompt.md"),
-                        temperature=formatter_cfg.get("temperature", 0.3),
-                    )
+            if use_ai_formatting:
+                meaning_formatter = create_meaning_formatter(config_loader)
+                examples_formatter = create_examples_formatter(config_loader)
+                if verbose:
+                    click.echo("Field formatters initialized from AI config")
 
-            # Generate GPT fields in parallel if GPT is enabled
+
+            # Generate AI fields in parallel if enabled
             field_results = {}
             if field_generator:
                 if verbose:
-                    click.echo(f"Generating GPT fields for {len(collection)} entries...")
+                    click.echo(f"Generating AI fields for {len(collection)} entries...")
                 
-                def generate_gpt_field(entry):
-                    """Generate GPT field for a single entry."""
-                    return entry, field_generator.generate(entry.chinese, entry.pinyin)
-                
-                # Use ThreadPoolExecutor for parallel GPT calls
-                with ThreadPoolExecutor(max_workers=5) as executor:
-                    # Submit all GPT generation tasks
-                    future_to_entry = {
-                        executor.submit(generate_gpt_field, entry): entry 
-                        for entry in collection
-                    }
+                field_results = field_generator.generate_fields(collection)
                     
-                    # Collect results as they complete
-                    for future in as_completed(future_to_entry):
-                        try:
-                            entry, field_result = future.result()
-                            field_results[id(entry)] = field_result
-                            
-                            # Track usage statistics
-                            if field_result.token_usage:
-                                total_tokens += field_result.token_usage.total_tokens
-                                total_cost += field_result.token_usage.cost_usd
-                                gpt_calls += 1
-                        except Exception as exc:
-                            entry = future_to_entry[future]
-                            click.echo(f"GPT generation failed for {entry.chinese}: {exc}")
-                            field_results[id(entry)] = None
+                # Track usage statistics from field results
+                for field_result in field_results.values():
+                    if hasattr(field_result, 'token_usage') and field_result.token_usage:
+                        total_tokens += field_result.token_usage.total_tokens
+                        total_cost += field_result.token_usage.cost_usd
+                        ai_calls += 1
                 
                 if verbose:
-                    click.echo(f"GPT field generation completed.")
+                    click.echo(f"AI field generation completed.")
 
             # Helper function to check for single characters
             def is_single_character(chinese: str) -> bool:
@@ -718,7 +641,7 @@ def convert(
                         if format_result.token_usage:
                             total_tokens += format_result.token_usage.total_tokens
                             total_cost += format_result.token_usage.cost_usd
-                            gpt_calls += 1
+                            ai_calls += 1
                     except Exception as exc:
                         if verbose:
                             click.echo(f"    Warning: Failed to format meaning field: {exc}")
@@ -736,7 +659,7 @@ def convert(
                         if format_result.token_usage:
                             total_tokens += format_result.token_usage.total_tokens
                             total_cost += format_result.token_usage.cost_usd
-                            gpt_calls += 1
+                            ai_calls += 1
                     except Exception as exc:
                         if verbose:
                             click.echo(f"    Warning: Failed to format examples field: {exc}")
@@ -885,21 +808,17 @@ def convert(
                     )
 
                 # Display AI usage summary 
-                if (use_gpt or use_gemini or format_meaning or format_examples) and gpt_calls > 0:
+                if (use_ai_fields or use_ai_formatting) and ai_calls > 0:
                     services_used = []
-                    if use_gpt:
-                        services_used.append("GPT field generation")
-                    if use_gemini:
-                        services_used.append("Gemini field generation")
-                    if format_meaning:
-                        services_used.append("meaning formatting")
-                    if format_examples:
-                        services_used.append("examples formatting")
+                    if use_ai_fields:
+                        services_used.append("field generation")
+                    if use_ai_formatting:
+                        services_used.append("field formatting")
                     
                     services_str = ", ".join(services_used)
                     click.echo(
                         click.style(
-                            f"AI Usage ({services_str}): {gpt_calls} calls, {total_tokens:,} tokens, ${total_cost:.4f} total cost",
+                            f"AI Usage ({services_str}): {ai_calls} calls, {total_tokens:,} tokens, ${total_cost:.4f} total cost",
                             fg="blue",
                         )
                     )
@@ -945,21 +864,17 @@ def convert(
                         )
 
                 # Display AI usage summary for dry-run
-                if (use_gpt or use_gemini or format_meaning or format_examples) and gpt_calls > 0:
+                if (use_ai_fields or use_ai_formatting) and ai_calls > 0:
                     services_used = []
-                    if use_gpt:
-                        services_used.append("GPT field generation")
-                    if use_gemini:
-                        services_used.append("Gemini field generation")
-                    if format_meaning:
-                        services_used.append("meaning formatting")
-                    if format_examples:
-                        services_used.append("examples formatting")
+                    if use_ai_fields:
+                        services_used.append("field generation")
+                    if use_ai_formatting:
+                        services_used.append("field formatting")
                     
                     services_str = ", ".join(services_used)
                     click.echo(
                         click.style(
-                            f"Dry run: AI usage ({services_str}) - {gpt_calls} calls, {total_tokens:,} tokens, "
+                            f"Dry run: AI usage ({services_str}) - {ai_calls} calls, {total_tokens:,} tokens, "
                             f"${total_cost:.4f} total cost",
                             fg="blue",
                         )
@@ -1397,6 +1312,12 @@ def missing_hsk(anki_file: Path, count: int, max_level: int, verbose: bool) -> N
     default="gpt-4o-mini",
     help="Model to use for word classification (gpt-4o-mini, gpt-5-nano, gemini-2.5-flash-lite)",
 )
+@click.option(
+    "--interactive-learning",
+    is_flag=True,
+    default=True,
+    help="Enable interactive learning mode for non-HSK words (default: enabled)",
+)
 def analyze_epub(
     epub_file: Path,
     anki_file: Path,
@@ -1408,6 +1329,7 @@ def analyze_epub(
     known_words_file: Optional[Path],
     classify_words: bool,
     classifier_model: str,
+    interactive_learning: bool,
 ) -> None:
     """Analyze Chinese vocabulary in an EPUB file against your Anki collection."""
 
@@ -1491,27 +1413,20 @@ def analyze_epub(
         # Initialize word classifier if requested
         word_classifier = None
         if classify_words:
-            click.echo(f"Initializing word classifier ({classifier_model})...")
+            click.echo(f"Initializing word classifier...")
             try:
-                from .epub_analyzer import WordClassifier
-                
-                # Determine model type from model name
-                if classifier_model.startswith("gpt"):
-                    model_type = "gpt"
-                elif classifier_model.startswith("gemini"):
-                    model_type = "gemini"
+                word_classifier = create_word_classifier()
+                if word_classifier.is_available():
+                    click.echo("✅ Word classifier initialized from AI config")
                 else:
-                    model_type = "gpt"  # default
-                
-                word_classifier = WordClassifier(
-                    model_type=model_type,
-                    model_name=classifier_model
-                )
-                click.echo("✅ Word classifier initialized")
+                    click.echo("Warning: Word classifier not available, check AI configuration")
+                    classify_words = False
+                    word_classifier = None
             except Exception as e:
                 click.echo(f"Warning: Failed to initialize word classifier: {e}")
                 click.echo("Continuing without word classification...")
                 classify_words = False
+                word_classifier = None
 
         # Analyze EPUB
         click.echo(f"Analyzing EPUB file: {epub_file}")
@@ -1525,6 +1440,26 @@ def analyze_epub(
             word_classifier=word_classifier,
         )
 
+        # Interactive learning workflow if enabled
+        if interactive_learning and analysis.word_classifications:
+            click.echo(f"\n🎓 Starting interactive learning session...")
+            
+            # Initialize interactive learner
+            learner = create_interactive_learner(
+                names_file=proper_names_file or Path("names.txt"),
+                known_words_file=known_words_file or Path("known_words.txt")
+            )
+            
+            # Process classified words interactively
+            session = learner.process_classified_words(analysis.word_classifications)
+            
+            # Save results
+            learner.save_session(session)
+            
+            # Update analysis with processed words for final report
+            if session.known_words:
+                click.echo(f"\nℹ️  Note: {len(session.known_words)} words marked as known will be filtered from future analyses")
+        
         # Generate comprehensive report
         _generate_epub_analysis_report(analysis, verbose, list(target_coverage), top_unknown)
 

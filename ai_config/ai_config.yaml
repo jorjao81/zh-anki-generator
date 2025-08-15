@@ -1,0 +1,124 @@
+# AI Configuration for Anki Pleco Importer
+# Configure AI providers at the individual feature level
+
+# Global AI settings
+global:
+  # Default provider if none specified
+  default_provider: "gpt"  # or "gemini" or "standard"
+  
+  # Cost tracking and usage limits (optional)
+  max_daily_cost_usd: 10.0
+  warn_at_cost_usd: 5.0
+
+# Provider configurations
+providers:
+  gpt:
+    api_key: null  # Will use environment variable OPENAI_API_KEY if null
+    base_url: null  # Optional custom API endpoint
+    
+  gemini:
+    api_key: null  # Will use environment variable GEMINI_API_KEY if null
+    base_url: null  # Optional custom API endpoint
+
+# Configuration examples (reusable templates)
+examples:
+  gpt_mini:
+    provider: "gpt"
+    model: "gpt-4o-mini"
+    temperature: 0.3
+    max_tokens: 400
+    
+  gpt_standard:
+    provider: "gpt"
+    model: "gpt-4o"
+    temperature: 0.5
+    max_tokens: 800
+    
+  gemini_fast:
+    provider: "gemini"
+    model: "gemini-2.5-flash-lite"
+    temperature: 0.1
+    max_tokens: 200
+    
+  gemini_standard:
+    provider: "gemini"
+    model: "gemini-2.5-flash"
+    temperature: 0.3
+    max_tokens: 400
+
+# Feature configurations
+# Each sub-feature can specify: "standard" (no AI), "gpt", or "gemini"
+features:
+  
+  # Field generation (etymology and structural decomposition)
+  field_generation:
+    # Single character field generation
+    single_char:
+      provider: "gemini"                 # "standard", "gpt", or "gemini"
+      model: "gemini-2.5-pro"
+      prompt: "ai_config/prompts/field_generation_single_char.md"
+      temperature: 1.0
+    
+    # Multi-character word field generation  
+    multi_char:
+      provider: "gemini"                 # "standard", "gpt", or "gemini"
+      model: "gemini-2.5-pro"
+      prompt: "ai_config/prompts/field_generation_multi_char.md"
+      temperature: 1.0
+      
+  # Meaning/definition field formatting
+  meaning_formatter:
+    # Single character formatting (disabled by default as per user request)
+    single_char:
+      provider: "standard"            # "standard", "gpt", or "gemini"
+      model: "gpt-5-mini"  
+      prompt: "ai_config/prompts/meaning_formatter_single_char.md"
+      temperature: 0.3
+      max_tokens: 300
+    
+    # Multi-character word formatting
+    multi_char:
+      provider: "gpt"                 # "standard", "gpt", or "gemini"
+      model: "gpt-5-mini"
+      prompt: "ai_config/prompts/meaning_formatter_multi_char.md" 
+      temperature: 0.3
+      max_tokens: 300
+      
+  # Examples field formatting
+  examples_formatter:
+    # Single character examples formatting
+    single_char:
+      provider: "gpt"                 # "standard", "gpt", or "gemini"
+      model: "gpt-4o-mini"
+      prompt: "ai_config/prompts/examples_formatter_single_char.md"
+      temperature: 0.3
+      max_tokens: 400
+      
+    # Multi-character word examples formatting
+    multi_char:
+      provider: "gpt"                 # "standard", "gpt", or "gemini"
+      model: "gpt-4o-mini"
+      prompt: "ai_config/prompts/examples_formatter_multi_char.md"
+      temperature: 0.3
+      max_tokens: 400
+      
+  # Word classification for EPUB analysis
+  word_classifier:
+    provider: "gemini"                   # "standard", "gpt", or "gemini"
+    model: "gemini-2.5-flash-lite"
+    prompt: "ai_config/prompts/word_classifier.md"
+    temperature: 0.1
+    max_tokens: 200
+    
+    # Fallback models for when primary model returns "unknown"
+    fallback_models:
+      - provider: "gemini"
+        model: "gemini-2.5-flash"
+        prompt: "ai_config/prompts/word_classifier.md"
+        temperature: 0.3
+        max_tokens: 200
+      - provider: "gemini" 
+        model: "gemini-2.5-pro"
+        prompt: "ai_config/prompts/word_classifier.md"
+        temperature: 0.8
+        max_tokens: 300
