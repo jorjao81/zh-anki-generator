@@ -50,13 +50,14 @@ class UnifiedWordClassifier:
         provider = self._config.get('provider', 'gpt')
         
         # Get provider-level configuration for API keys
-        provider_config = self.config_loader.load_config().providers.get(provider, {})
+        providers_dict = self.config_loader.load_config().providers
+        provider_config = providers_dict.get(provider) if provider in providers_dict else None
         
         if provider == 'gpt':
             from openai import OpenAI
             import os
-            api_key = self._config.get('api_key') or provider_config.get('api_key') or os.getenv('OPENAI_API_KEY')
-            base_url = self._config.get('base_url') or provider_config.get('base_url')
+            api_key = self._config.get('api_key') or (provider_config.api_key if provider_config else None) or os.getenv('OPENAI_API_KEY')
+            base_url = self._config.get('base_url') or (provider_config.base_url if provider_config else None)
             self._client = OpenAI(
                 api_key=api_key,
                 base_url=base_url
@@ -64,7 +65,7 @@ class UnifiedWordClassifier:
         elif provider == 'gemini':
             import google.generativeai as genai
             import os
-            api_key = self._config.get('api_key') or provider_config.get('api_key') or os.getenv('GEMINI_API_KEY')
+            api_key = self._config.get('api_key') or (provider_config.api_key if provider_config else None) or os.getenv('GEMINI_API_KEY')
             genai.configure(api_key=api_key)
             self._client = genai.GenerativeModel(self._config.get('model'))
         else:
@@ -133,18 +134,19 @@ class UnifiedWordClassifier:
             provider = config.get('provider', 'gpt')
             
             # Initialize client for this config if needed
-            provider_config = self.config_loader.load_config().providers.get(provider, {})
+            providers_dict = self.config_loader.load_config().providers
+            provider_config = providers_dict.get(provider) if provider in providers_dict else None
             
             if provider == 'gpt':
                 from openai import OpenAI
                 import os
                 api_key = (config.get('api_key') or 
                           self._config.get('api_key') or 
-                          provider_config.get('api_key') or 
+                          (provider_config.api_key if provider_config else None) or 
                           os.getenv('OPENAI_API_KEY'))
                 base_url = (config.get('base_url') or 
                            self._config.get('base_url') or 
-                           provider_config.get('base_url'))
+                           (provider_config.base_url if provider_config else None))
                 client = OpenAI(
                     api_key=api_key,
                     base_url=base_url
@@ -154,7 +156,7 @@ class UnifiedWordClassifier:
                 import os
                 api_key = (config.get('api_key') or 
                           self._config.get('api_key') or 
-                          provider_config.get('api_key') or 
+                          (provider_config.api_key if provider_config else None) or 
                           os.getenv('GEMINI_API_KEY'))
                 genai.configure(api_key=api_key)
                 client = genai.GenerativeModel(config.get('model'))

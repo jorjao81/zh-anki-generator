@@ -41,4 +41,24 @@ Format the content so it looks like the exemples:
 </ol>
 ```
 
+if a usage or domain is in parentheses, remove the parentheses, eg:
+
+input:
+```
+Chinese Word: 高维
+Original Content: (math.) higher dimensional
+```
+
+desired output:
+```html
+<span class="domain">mathematics</span> higher dimensional
+```
+
 Do not add anything that changes meaning, just add the formatting and expand abreviations.
+
+## Common domain words (non exhaustive)
+ecology
+anatomy
+pharmacy
+linguistics
+mathematics

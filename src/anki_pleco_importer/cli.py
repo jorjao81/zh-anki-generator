@@ -151,6 +151,16 @@ def format_html_for_terminal(text: str) -> str:
     def replace_red_span(match: re.Match[str]) -> str:
         content = match.group(1)
         return click.style(content, fg="red")
+    
+    # Replace <span class="domain">...</span> with click's red formatting
+    def replace_domain_span(match: re.Match[str]) -> str:
+        content = match.group(1)
+        return click.style(content, fg="red")
+    
+    # Replace <span class="part-of-speech">...</span> with click's blue formatting
+    def replace_pos_span(match: re.Match[str]) -> str:
+        content = match.group(1)
+        return click.style(content, fg="blue", bold=True)
 
     # Handle bold tags (case insensitive)
     formatted = re.sub(r"<b>(.*?)</b>", replace_bold, text, flags=re.IGNORECASE)
@@ -162,6 +172,22 @@ def format_html_for_terminal(text: str) -> str:
     formatted = re.sub(
         r'<span\s+style="color:\s*red;">(.*?)</span>',
         replace_red_span,
+        formatted,
+        flags=re.IGNORECASE,
+    )
+    
+    # Handle domain class spans
+    formatted = re.sub(
+        r'<span\s+class="domain">(.*?)</span>',
+        replace_domain_span,
+        formatted,
+        flags=re.IGNORECASE,
+    )
+    
+    # Handle part-of-speech class spans
+    formatted = re.sub(
+        r'<span\s+class="part-of-speech">(.*?)</span>',
+        replace_pos_span,
         formatted,
         flags=re.IGNORECASE,
     )
@@ -257,6 +283,12 @@ def convert_html_to_terminal(html_content: str) -> str:
     # Handle part-of-speech tags in meanings
     content = re.sub(r'<span class="part-of-speech">(.*?)</span>', lambda m: click.style(m.group(1), fg="magenta", bold=True), content, flags=re.IGNORECASE)
     
+    # Handle domain tags in meanings
+    content = re.sub(r'<span class="domain">(.*?)</span>', lambda m: click.style(m.group(1), fg="red", bold=True), content, flags=re.IGNORECASE)
+    
+    # Handle usage tags in meanings
+    content = re.sub(r'<span class="usage"[^>]*>(.*?)</span>', lambda m: click.style(m.group(1), fg="yellow"), content, flags=re.IGNORECASE)
+    
     # Handle any Chinese characters that might appear in examples (detect by Unicode range)
     def highlight_chinese_chars(text):
         # Match Chinese characters (CJK Unified Ideographs)
@@ -323,8 +355,8 @@ def convert_html_to_terminal(html_content: str) -> str:
 
 def format_meaning_box(meaning: str) -> str:
     """Format meaning text in a multi-line box for better readability."""
-    # Format HTML first
-    formatted_meaning = format_html_for_terminal(meaning)
+    # Meaning should already be converted from HTML to terminal format
+    formatted_meaning = meaning
 
     # Split into lines and wrap each line at 80 characters
     lines = formatted_meaning.split("\n")

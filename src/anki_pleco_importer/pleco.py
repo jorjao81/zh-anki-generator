@@ -449,10 +449,10 @@ def parse_pleco_definition(definition: str) -> Tuple[str, Optional[List[str]], O
     # Extract meaning sections and examples
     meanings, examples = _extract_meaning_sections(definition, pos_positions)
 
-    # Format meanings with HTML
-    formatted_meaning = _format_meaning_with_html(meanings)
+    # Return raw meanings without formatting - formatting will be done by formatter classes
+    raw_meaning = "\n".join(meanings)
 
-    return (formatted_meaning, examples if examples else None, similar_characters if similar_characters else None)
+    return (raw_meaning, examples if examples else None, similar_characters if similar_characters else None)
 
 
 def parse_pleco_definition_semantic(definition: str) -> Tuple[str, Optional[List[str]], Optional[List[str]]]:
@@ -473,10 +473,10 @@ def parse_pleco_definition_semantic(definition: str) -> Tuple[str, Optional[List
     # Extract meaning sections and examples
     meanings, examples = _extract_meaning_sections(definition, pos_positions)
 
-    # Format meanings with semantic markup
-    formatted_meaning = _format_meaning_with_semantic_markup(meanings)
+    # Return raw meanings without formatting - formatting will be done by formatter classes
+    raw_meaning = "\n".join(meanings)
 
-    return (formatted_meaning, examples if examples else None, similar_characters if similar_characters else None)
+    return (raw_meaning, examples if examples else None, similar_characters if similar_characters else None)
 
 
 def format_examples_with_semantic_markup(examples: Optional[List[str]]) -> Optional[str]:

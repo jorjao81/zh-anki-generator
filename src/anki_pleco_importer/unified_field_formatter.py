@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import logging
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any
 from pathlib import Path
@@ -10,6 +11,8 @@ from pydantic import BaseModel
 
 from .llm import TokenUsage
 from .ai_config import AIConfigLoader
+
+logger = logging.getLogger(__name__)
 
 
 class FieldFormattingResult(BaseModel):
@@ -121,7 +124,9 @@ class AIFieldFormatter(BaseFieldFormatter):
         char_type = self._get_char_type(hanzi)
         
         # Check if feature is enabled for this character type
-        if not self.config_loader.is_feature_enabled(self.feature_name, char_type):
+        enabled = self.config_loader.is_feature_enabled(self.feature_name, char_type)
+        
+        if not enabled:
             return FieldFormattingResult(formatted_content=original_content)
         
         try:
@@ -201,6 +206,7 @@ class AIFieldFormatter(BaseFieldFormatter):
             
         except Exception as e:
             # Return original content on error
+            logger.error(f"Error in {self.feature_name} formatter: {str(e)}")
             return FieldFormattingResult(formatted_content=original_content)
 
 
@@ -214,12 +220,13 @@ class UnifiedFieldFormatterFactory:
     def create_formatter(self, feature_name: str) -> BaseFieldFormatter:
         """Create appropriate formatter based on configuration."""
         try:
-            config = self.config_loader.get_feature_config(feature_name)
+            # Check if any character type for this feature is AI-enabled
+            for char_type in ['single_char', 'multi_char']:
+                if self.config_loader.is_feature_enabled(feature_name, char_type):
+                    return AIFieldFormatter(feature_name, self.config_loader)
             
-            if config.get('mode') == 'ai':
-                return AIFieldFormatter(feature_name, self.config_loader)
-            else:
-                return StandardFieldFormatter()
+            # If no character types are AI-enabled, use standard formatter
+            return StandardFieldFormatter()
                 
         except (ValueError, KeyError):
             # Default to standard formatter if config issues
