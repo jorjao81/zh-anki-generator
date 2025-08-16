@@ -90,7 +90,7 @@ features:
       provider: "gpt"                 # "standard", "gpt", or "gemini"
       model: "gpt-5-mini"
       prompt: "ai_config/prompts/examples_formatter_single_char.md"
-      temperature: 0.3
+      temperature: 1.0
       max_tokens: 400
       
     # Multi-character word examples formatting
@@ -98,7 +98,7 @@ features:
       provider: "gpt"                 # "standard", "gpt", or "gemini"
       model: "gpt-5-mini"
       prompt: "ai_config/prompts/examples_formatter_multi_char.md"
-      temperature: 0.3
+      temperature: 1.0
       max_tokens: 400
       
   # Word classification for EPUB analysis
@@ -106,7 +106,7 @@ features:
     provider: "gpt"                   # "standard", "gpt", or "gemini"
     model: "gpt-5-mini"
     prompt: "ai_config/prompts/word_classifier.md"
-    temperature: 0.3
+    temperature: 1.0
     
     # Fallback models for when primary model returns "unknown"
     fallback_models:
