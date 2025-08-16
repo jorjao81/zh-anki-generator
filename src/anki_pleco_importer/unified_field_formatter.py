@@ -58,6 +58,12 @@ class AIFieldFormatter(BaseFieldFormatter):
         "gemini-2.5-flash-lite": {"input": 0.075, "output": 0.30},
     }
 
+    # DeepSeek pricing per 1M tokens
+    DEEPSEEK_PRICING = {
+        "deepseek-chat": {"input_cache_hit": 0.07, "input_cache_miss": 0.27, "output": 1.10},
+        "deepseek-reasoner": {"input_cache_hit": 0.14, "input_cache_miss": 0.55, "output": 2.19},
+    }
+
     def __init__(self, feature_name: str, config_loader: Optional[AIConfigLoader] = None):
         """Initialize formatter with feature configuration."""
         self.feature_name = feature_name
@@ -92,6 +98,12 @@ class AIFieldFormatter(BaseFieldFormatter):
                 import google.generativeai as genai
                 genai.configure(api_key=config.get('api_key'))
                 self._clients[client_key] = genai.GenerativeModel(config.get('model'))
+            elif provider == 'deepseek':
+                from openai import OpenAI
+                self._clients[client_key] = OpenAI(
+                    api_key=config.get('api_key'),
+                    base_url=config.get('base_url', 'https://api.deepseek.com')
+                )
             else:
                 raise ValueError(f"Unsupported provider: {provider}")
         
@@ -109,13 +121,19 @@ class AIFieldFormatter(BaseFieldFormatter):
         """Calculate cost based on token usage."""
         if provider == 'gpt':
             pricing = self.GPT_PRICING.get(model, {"input": 0.15, "output": 0.60})
+            input_cost = (input_tokens / 1_000_000) * pricing.get("input", 0)
+            output_cost = (output_tokens / 1_000_000) * pricing.get("output", 0)
         elif provider == 'gemini':
             pricing = self.GEMINI_PRICING.get(model, {"input": 0.075, "output": 0.30})
+            input_cost = (input_tokens / 1_000_000) * pricing.get("input", 0)
+            output_cost = (output_tokens / 1_000_000) * pricing.get("output", 0)
+        elif provider == 'deepseek':
+            pricing = self.DEEPSEEK_PRICING.get(model, {"input_cache_miss": 0.27, "output": 1.10})
+            # Assume cache miss for simplicity
+            input_cost = (input_tokens / 1_000_000) * pricing.get("input_cache_miss", 0)
+            output_cost = (output_tokens / 1_000_000) * pricing.get("output", 0)
         else:
             return 0.0
-        
-        input_cost = (input_tokens / 1_000_000) * pricing.get("input", 0)
-        output_cost = (output_tokens / 1_000_000) * pricing.get("output", 0)
         
         return input_cost + output_cost
     
@@ -143,9 +161,9 @@ class AIFieldFormatter(BaseFieldFormatter):
             # Create context for formatting
             user_message = f"Chinese word/character: {hanzi}\nOriginal content: {original_content}"
             
-            if provider == 'gpt':
+            if provider in ['gpt', 'deepseek']:
                 response = client.chat.completions.create(
-                    model=config.get('model', 'gpt-4o-mini'),
+                    model=config.get('model', 'gpt-4o-mini' if provider == 'gpt' else 'deepseek-chat'),
                     messages=[
                         {"role": "system", "content": prompt_template},
                         {"role": "user", "content": user_message}
@@ -205,9 +223,9 @@ class AIFieldFormatter(BaseFieldFormatter):
             )
             
         except Exception as e:
-            # Return original content on error
+            # Fail hard when AI formatting is explicitly requested
             logger.error(f"Error in {self.feature_name} formatter: {str(e)}")
-            return FieldFormattingResult(formatted_content=original_content)
+            raise RuntimeError(f"AI formatting failed for {self.feature_name}: {str(e)}") from e
 
 
 class UnifiedFieldFormatterFactory:

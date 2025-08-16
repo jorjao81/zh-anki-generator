@@ -1,0 +1,14 @@
+global:
+  default_provider: "deepseek"
+
+providers:
+  deepseek:
+    api_key: "test-deepseek-key"
+    base_url: "https://api.deepseek.com"
+
+features:
+  word_classifier:
+    provider: "deepseek"
+    model: "deepseek-chat"
+    prompt: "ai_config/prompts/word_classifier.md"
+    temperature: 0.1

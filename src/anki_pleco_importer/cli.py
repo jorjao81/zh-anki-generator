@@ -676,7 +676,10 @@ def convert(
                             ai_calls += 1
                     except Exception as exc:
                         if verbose:
-                            click.echo(f"    Warning: Failed to format meaning field: {exc}")
+                            click.echo(f"    Error: Failed to format meaning field: {exc}")
+                        # Fail hard when AI formatting is explicitly requested
+                        if use_ai_formatting:
+                            raise click.ClickException(f"AI formatting failed: {exc}")
                 elif meaning_formatter and anki_card.meaning and is_single_character(anki_card.simplified) and verbose:
                     click.echo(f"    Skipping meaning formatting for single character '{anki_card.simplified}'")
 
@@ -694,7 +697,10 @@ def convert(
                             ai_calls += 1
                     except Exception as exc:
                         if verbose:
-                            click.echo(f"    Warning: Failed to format examples field: {exc}")
+                            click.echo(f"    Error: Failed to format examples field: {exc}")
+                        # Fail hard when AI formatting is explicitly requested
+                        if use_ai_formatting:
+                            raise click.ClickException(f"AI formatting failed: {exc}")
 
                 # Generate audio if requested and not in dry-run mode and not skipped
                 if audio_generator and not dry_run and not anki_card.nohearing:

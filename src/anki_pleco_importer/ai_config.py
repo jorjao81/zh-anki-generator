@@ -18,7 +18,7 @@ class ProviderConfig(BaseModel):
 
 class FeatureConfig(BaseModel):
     """Configuration for an AI feature."""
-    provider: str = "standard"  # "standard", "gpt", or "gemini"
+    provider: str = "standard"  # "standard", "gpt", "gemini", or "deepseek"
     model: Optional[str] = None
     prompt: Optional[str] = None
     temperature: Optional[float] = None
@@ -30,7 +30,7 @@ class FeatureConfig(BaseModel):
     
     @validator('provider')
     def validate_provider(cls, v):
-        valid_providers = ["standard", "gpt", "gemini"]
+        valid_providers = ["standard", "gpt", "gemini", "deepseek"]
         if v not in valid_providers:
             raise ValueError(f"Invalid provider '{v}'. Must be one of: {valid_providers}")
         return v
@@ -44,7 +44,7 @@ class FeatureConfig(BaseModel):
 
 class CharTypeConfig(BaseModel):
     """Configuration for single/multi-character specific settings."""
-    provider: str = "standard"  # "standard", "gpt", or "gemini"
+    provider: str = "standard"  # "standard", "gpt", "gemini", or "deepseek"
     model: Optional[str] = None
     prompt: Optional[str] = None
     temperature: Optional[float] = None
@@ -54,7 +54,7 @@ class CharTypeConfig(BaseModel):
     
     @validator('provider')
     def validate_provider(cls, v):
-        valid_providers = ["standard", "gpt", "gemini"]
+        valid_providers = ["standard", "gpt", "gemini", "deepseek"]
         if v not in valid_providers:
             raise ValueError(f"Invalid provider '{v}'. Must be one of: {valid_providers}")
         return v
@@ -210,6 +210,12 @@ class AIConfigLoader:
                 ]
                 if model not in valid_gemini_models:
                     warnings.append(f"{feature_desc}: Unknown Gemini model '{model}'. Known models: {', '.join(valid_gemini_models)}")
+            elif provider == 'deepseek':
+                valid_deepseek_models = [
+                    'deepseek-chat', 'deepseek-reasoner'
+                ]
+                if model not in valid_deepseek_models:
+                    warnings.append(f"{feature_desc}: Unknown DeepSeek model '{model}'. Known models: {', '.join(valid_deepseek_models)}")
         else:
             warnings.append(f"{feature_desc}: No model specified for provider '{provider}'")
         
@@ -226,6 +232,12 @@ class AIConfigLoader:
                 errors.append(f"{feature_desc}: Gemini API key not found. Set GEMINI_API_KEY environment variable or specify in providers.gemini.api_key")
             else:
                 self._test_api_key('gemini', api_key, feature_desc, errors, warnings)
+        elif provider == 'deepseek':
+            api_key = self._get_api_key_for_provider('deepseek')
+            if not api_key:
+                errors.append(f"{feature_desc}: DeepSeek API key not found. Set DEEPSEEK_API_KEY environment variable or specify in providers.deepseek.api_key")
+            else:
+                self._test_api_key('deepseek', api_key, feature_desc, errors, warnings)
     
     def _get_api_key_for_provider(self, provider: str) -> Optional[str]:
         """Get API key for a provider."""
@@ -240,6 +252,8 @@ class AIConfigLoader:
             return os.getenv('OPENAI_API_KEY')
         elif provider == 'gemini':
             return os.getenv('GEMINI_API_KEY')
+        elif provider == 'deepseek':
+            return os.getenv('DEEPSEEK_API_KEY')
         
         return None
     
@@ -257,6 +271,15 @@ class AIConfigLoader:
                 genai.configure(api_key=api_key)
                 # Simple test request
                 list(genai.list_models())
+                
+            elif provider == 'deepseek':
+                from openai import OpenAI
+                client = OpenAI(
+                    api_key=api_key,
+                    base_url="https://api.deepseek.com"
+                )
+                # Simple test request
+                client.models.list()
                 
         except Exception as e:
             error_msg = str(e)
@@ -325,6 +348,8 @@ class AIConfigLoader:
                 result['api_key'] = os.getenv('OPENAI_API_KEY')
             elif provider_name == 'gemini':
                 result['api_key'] = os.getenv('GEMINI_API_KEY')
+            elif provider_name == 'deepseek':
+                result['api_key'] = os.getenv('DEEPSEEK_API_KEY')
         
         return result
     

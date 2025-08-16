@@ -25,3 +25,4 @@ def before_scenario(context, scenario):
     context.output_file = None
     context.result = None
     context.error = None
+    context.deepseek_api_calls = []  # For tracking DeepSeek API calls

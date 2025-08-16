@@ -35,6 +35,12 @@ class UnifiedWordClassifier:
         "gemini-2.5-flash-lite": {"input": 0.075, "output": 0.30},
     }
 
+    # DeepSeek pricing per 1M tokens
+    DEEPSEEK_PRICING = {
+        "deepseek-chat": {"input_cache_hit": 0.07, "input_cache_miss": 0.27, "output": 1.10},
+        "deepseek-reasoner": {"input_cache_hit": 0.14, "input_cache_miss": 0.55, "output": 2.19},
+    }
+
     def __init__(self, config_loader: Optional[AIConfigLoader] = None):
         """Initialize classifier with configuration."""
         self.config_loader = config_loader or AIConfigLoader()
@@ -68,6 +74,15 @@ class UnifiedWordClassifier:
             api_key = self._config.get('api_key') or (provider_config.api_key if provider_config else None) or os.getenv('GEMINI_API_KEY')
             genai.configure(api_key=api_key)
             self._client = genai.GenerativeModel(self._config.get('model'))
+        elif provider == 'deepseek':
+            from openai import OpenAI
+            import os
+            api_key = self._config.get('api_key') or (provider_config.api_key if provider_config else None) or os.getenv('DEEPSEEK_API_KEY')
+            base_url = self._config.get('base_url') or (provider_config.base_url if provider_config else None) or 'https://api.deepseek.com'
+            self._client = OpenAI(
+                api_key=api_key,
+                base_url=base_url
+            )
         else:
             raise ValueError(f"Unsupported provider: {provider}")
     
@@ -87,13 +102,19 @@ class UnifiedWordClassifier:
         """Calculate cost based on token usage."""
         if provider == 'gpt':
             pricing = self.GPT_PRICING.get(model, {"input": 0.15, "output": 0.60})
+            input_cost = (input_tokens / 1_000_000) * pricing.get("input", 0)
+            output_cost = (output_tokens / 1_000_000) * pricing.get("output", 0)
         elif provider == 'gemini':
             pricing = self.GEMINI_PRICING.get(model, {"input": 0.075, "output": 0.30})
+            input_cost = (input_tokens / 1_000_000) * pricing.get("input", 0)
+            output_cost = (output_tokens / 1_000_000) * pricing.get("output", 0)
+        elif provider == 'deepseek':
+            pricing = self.DEEPSEEK_PRICING.get(model, {"input_cache_miss": 0.27, "output": 1.10})
+            # Assume cache miss for simplicity
+            input_cost = (input_tokens / 1_000_000) * pricing.get("input_cache_miss", 0)
+            output_cost = (output_tokens / 1_000_000) * pricing.get("output", 0)
         else:
             return 0.0
-        
-        input_cost = (input_tokens / 1_000_000) * pricing.get("input", 0)
-        output_cost = (output_tokens / 1_000_000) * pricing.get("output", 0)
         
         return input_cost + output_cost
     
@@ -160,16 +181,31 @@ class UnifiedWordClassifier:
                           os.getenv('GEMINI_API_KEY'))
                 genai.configure(api_key=api_key)
                 client = genai.GenerativeModel(config.get('model'))
+            elif provider == 'deepseek':
+                from openai import OpenAI
+                import os
+                api_key = (config.get('api_key') or 
+                          self._config.get('api_key') or 
+                          (provider_config.api_key if provider_config else None) or 
+                          os.getenv('DEEPSEEK_API_KEY'))
+                base_url = (config.get('base_url') or 
+                           self._config.get('base_url') or 
+                           (provider_config.base_url if provider_config else None) or 
+                           'https://api.deepseek.com')
+                client = OpenAI(
+                    api_key=api_key,
+                    base_url=base_url
+                )
             else:
                 return None
             
             prompt = self._load_prompt()
             
-            if provider == 'gpt':
-                # Handle o1 models differently
-                model = config.get('model', 'gpt-4o-mini')
+            if provider in ['gpt', 'deepseek']:
+                # Handle o1 models differently (GPT only)
+                model = config.get('model', 'gpt-4o-mini' if provider == 'gpt' else 'deepseek-chat')
                 
-                if model.startswith('gpt-5') or model.startswith('o1'):
+                if provider == 'gpt' and (model.startswith('gpt-5') or model.startswith('o1')):
                     # Use newer parameters for o1 models
                     response = client.chat.completions.create(
                         model=model,
@@ -180,7 +216,7 @@ class UnifiedWordClassifier:
                         reasoning_effort=config.get('reasoning_effort', 'medium'),
                     )
                 else:
-                    # Use structured output if enabled
+                    # Use structured output if enabled (for GPT and DeepSeek)
                     if config.get('use_structured_output', True):
                         response = client.chat.completions.create(
                             model=model,

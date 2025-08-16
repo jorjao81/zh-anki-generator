@@ -54,15 +54,15 @@ features:
   field_generation:
     # Single character field generation
     single_char:
-      provider: "gemini"                 # "standard", "gpt", or "gemini"
-      model: "gemini-2.5-pro"
+      provider: "deepseek"                 # "standard", "gpt", or "gemini"
+      model: "deepseek-reasoner"
       prompt: "ai_config/prompts/field_generation_single_char.md"
       temperature: 1.0
     
     # Multi-character word field generation  
     multi_char:
-      provider: "gemini"                 # "standard", "gpt", or "gemini"
-      model: "gemini-2.5-pro"
+      provider: "deepseek"                 # "standard", "gpt", or "gemini"
+      model: "deepseek-reasoner"
       prompt: "ai_config/prompts/field_generation_multi_char.md"
       temperature: 1.0
       
@@ -103,22 +103,21 @@ features:
       
   # Word classification for EPUB analysis
   word_classifier:
-    provider: "gpt"                   # "standard", "gpt", or "gemini"
-    model: "gpt-5-mini"
+    provider: "deepseek"                   # "standard", "gpt", or "gemini"
+    model: "deepseek-chat"
     prompt: "ai_config/prompts/word_classifier.md"
-    temperature: 1.0
     
     # Fallback models for when primary model returns "unknown"
-    fallback_models:
+    # fallback_models:
       # - provider: "gpt"
       #   model: "gpt-5-mini"
       #   prompt: "ai_config/prompts/word_classifier.md"
       #   temperature: 0.3
       #   max_tokens: 200
-      - provider: "gpt" 
-        model: "gpt-5"
-        prompt: "ai_config/prompts/word_classifier.md"
-        temperature: 0.4
+      # - provider: "gpt" 
+      #   model: "gpt-5"
+      #   prompt: "ai_config/prompts/word_classifier.md"
+      #   temperature: 0.4
       
   # # Word classification for EPUB analysis
   # word_classifier:

@@ -49,6 +49,12 @@ class AIFieldGenerator(BaseFieldGenerator):
         "gemini-2.5-flash-lite": {"input": 0.075, "output": 0.30},
     }
 
+    # DeepSeek pricing per 1M tokens
+    DEEPSEEK_PRICING = {
+        "deepseek-chat": {"input_cache_hit": 0.07, "input_cache_miss": 0.27, "output": 1.10},
+        "deepseek-reasoner": {"input_cache_hit": 0.14, "input_cache_miss": 0.55, "output": 2.19},
+    }
+
     def __init__(self, config_loader: Optional[AIConfigLoader] = None):
         """Initialize with configuration."""
         self.config_loader = config_loader or AIConfigLoader()
@@ -81,6 +87,12 @@ class AIFieldGenerator(BaseFieldGenerator):
                 import google.generativeai as genai
                 genai.configure(api_key=config.get('api_key'))
                 self._clients[client_key] = genai.GenerativeModel(config.get('model'))
+            elif provider == 'deepseek':
+                from openai import OpenAI
+                self._clients[client_key] = OpenAI(
+                    api_key=config.get('api_key'),
+                    base_url=config.get('base_url', 'https://api.deepseek.com')
+                )
             else:
                 raise ValueError(f"Unsupported provider: {provider}")
         
@@ -143,13 +155,19 @@ class AIFieldGenerator(BaseFieldGenerator):
         """Calculate cost based on token usage."""
         if provider == 'gpt':
             pricing = self.GPT_PRICING.get(model, {"input": 0.15, "output": 0.60})
+            input_cost = (input_tokens / 1_000_000) * pricing.get("input", 0)
+            output_cost = (output_tokens / 1_000_000) * pricing.get("output", 0)
         elif provider == 'gemini':
             pricing = self.GEMINI_PRICING.get(model, {"input": 0.075, "output": 0.30})
+            input_cost = (input_tokens / 1_000_000) * pricing.get("input", 0)
+            output_cost = (output_tokens / 1_000_000) * pricing.get("output", 0)
+        elif provider == 'deepseek':
+            pricing = self.DEEPSEEK_PRICING.get(model, {"input_cache_miss": 0.27, "output": 1.10})
+            # Assume cache miss for simplicity
+            input_cost = (input_tokens / 1_000_000) * pricing.get("input_cache_miss", 0)
+            output_cost = (output_tokens / 1_000_000) * pricing.get("output", 0)
         else:
             return 0.0
-        
-        input_cost = (input_tokens / 1_000_000) * pricing.get("input", 0)
-        output_cost = (output_tokens / 1_000_000) * pricing.get("output", 0)
         
         return input_cost + output_cost
     
@@ -182,11 +200,11 @@ class AIFieldGenerator(BaseFieldGenerator):
             
             user_message = json.dumps(request_data, ensure_ascii=False)
             
-            if provider == 'gpt':
-                # Handle o1 models differently
-                model = config.get('model', 'gpt-4o-mini')
+            if provider in ['gpt', 'deepseek']:
+                # Handle o1 models differently (GPT only)
+                model = config.get('model', 'gpt-4o-mini' if provider == 'gpt' else 'deepseek-chat')
                 
-                if model.startswith('gpt-5') or model.startswith('o1'):
+                if provider == 'gpt' and (model.startswith('gpt-5') or model.startswith('o1')):
                     # Use newer parameters for o1 models
                     response = client.chat.completions.create(
                         model=model,
@@ -197,7 +215,7 @@ class AIFieldGenerator(BaseFieldGenerator):
                         reasoning_effort=config.get('reasoning_effort', 'medium'),
                     )
                 else:
-                    # Use standard parameters for other models
+                    # Use standard parameters for other models (including all DeepSeek models)
                     response = client.chat.completions.create(
                         model=model,
                         messages=[

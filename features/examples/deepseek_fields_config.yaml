@@ -1,0 +1,15 @@
+global:
+  default_provider: "deepseek"
+
+providers:
+  deepseek:
+    api_key: "test-deepseek-key"
+    base_url: "https://api.deepseek.com"
+
+features:
+  field_generation:
+    multi_char:
+      provider: "deepseek"
+      model: "deepseek-chat"
+      prompt: "ai_config/prompts/field_generation_multi_char.md"
+      temperature: 0.5
