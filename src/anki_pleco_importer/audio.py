@@ -216,7 +216,7 @@ class ForvoGenerator(AudioGenerator):
 
         return f"{username} ({gender_icon} {country_display}) - {votes} votes, rating: {rating:.1f} {stars}{preferred}"
 
-    def _select_best_pronunciation(self, pronunciations: List[Dict], text: str) -> Optional[Dict]:
+    def _select_best_pronunciation(self, pronunciations: List[Dict], text: str, fallback_providers: List[str] = []) -> Optional[Dict]:
         """Select the best pronunciation based on preferences."""
         if not pronunciations:
             return None
@@ -230,7 +230,7 @@ class ForvoGenerator(AudioGenerator):
 
         # No preferred users found - always show interactive selection if enabled
         if self.interactive_selection:
-            return self._interactive_pronunciation_selection(pronunciations, text)
+            return self._interactive_pronunciation_selection(pronunciations, text, fallback_providers)
 
         # Interactive selection disabled - use highest-rated pronunciation
         if not self.download_all_when_no_preferred:
@@ -331,7 +331,7 @@ class ForvoGenerator(AudioGenerator):
             except Exception as e:
                 logger.warning(f"Failed to cleanup preview file {file_path}: {e}")
 
-    def _interactive_pronunciation_selection(self, pronunciations: List[Dict], text: str) -> Optional[Dict]:
+    def _interactive_pronunciation_selection(self, pronunciations: List[Dict], text: str, fallback_providers: List[str] = []) -> Optional[Dict]:
         """Allow interactive selection of pronunciation with audio preview."""
         print(f"\n🎵 {text} - Found {len(pronunciations)} pronunciations:")
 
@@ -339,7 +339,11 @@ class ForvoGenerator(AudioGenerator):
             info = self._format_pronunciation_info(pronunciation)
             print(f"{i:2d}. {info}")
 
-        print("\nCommands: <number> to play, s<number> to select, 's' to skip")
+        # Add fallback providers to the list of options
+        for i, provider in enumerate(fallback_providers, len(pronunciations) + 1):
+            print(f"{i:2d}. Generate with {provider.capitalize()}")
+
+        print("\nCommands: <number> to play/generate, s<number> to select, 's' to skip")
         print("Example: '1' to play option 1, 's1' to select option 1, 's' to skip all")
 
         preview_files = []  # Track temporary files for cleanup
@@ -362,8 +366,13 @@ class ForvoGenerator(AudioGenerator):
                                 username = selected.get("username", "unknown")
                                 logger.info(f"User selected pronunciation by '{username}' for '{text}'")
                                 return selected
+                            elif len(pronunciations) < select_num <= len(pronunciations) + len(fallback_providers):
+                                provider_index = select_num - len(pronunciations) - 1
+                                provider = fallback_providers[provider_index]
+                                logger.info(f"User selected fallback provider '{provider}' for '{text}'")
+                                return {"fallback_provider": provider}
                             else:
-                                print(f"Please enter a number between 1 and {len(pronunciations)}")
+                                print(f"Please enter a number between 1 and {len(pronunciations) + len(fallback_providers)}")
                         except ValueError:
                             print("Invalid selection command. Use format: s1, s2, etc.")
                         continue
@@ -390,8 +399,12 @@ class ForvoGenerator(AudioGenerator):
                                     print("You may need to install an audio player or playsound3")
                             else:
                                 print("❌ Could not download audio for preview")
+                        elif len(pronunciations) < play_num <= len(pronunciations) + len(fallback_providers):
+                            # This is a temporary solution. The proper way to do this would be to
+                            # have access to the MultiProviderAudioGenerator instance here.
+                            print("Preview for generated audio is not supported.")
                         else:
-                            print(f"Please enter a number between 1 and {len(pronunciations)}")
+                            print(f"Please enter a number between 1 and {len(pronunciations) + len(fallback_providers)}")
                     except ValueError:
                         print("Invalid input. Use: number to play, s<number> to select, 's' to skip")
 
@@ -491,6 +504,7 @@ class ForvoGenerator(AudioGenerator):
         text: str,
         output_file: Optional[str] = None,
         cache_details: Optional[str] = None,
+        fallback_providers: List[str] = [],
     ) -> Optional[str]:
         """Generate audio with Forvo-specific caching that includes username."""
         # Check for any existing cached audio first
@@ -514,17 +528,20 @@ class ForvoGenerator(AudioGenerator):
             response = requests.get(url, timeout=10)
 
             if response.status_code != 200:
-                return None
+                return {"fallback_provider": "auto"}
 
             data = response.json()
             pronunciations = data.get("items", [])
             if not pronunciations:
-                return None
+                return {"fallback_provider": "auto"}
 
             # Select the best pronunciation to get username - cache the result
-            selected_pronunciation = self._select_best_pronunciation(pronunciations, text)
+            selected_pronunciation = self._select_best_pronunciation(pronunciations, text, fallback_providers)
             if not selected_pronunciation:
                 return None
+
+            if "fallback_provider" in selected_pronunciation:
+                return selected_pronunciation
 
             # Store the selection to avoid re-prompting
             self._cached_selection = selected_pronunciation
@@ -537,6 +554,54 @@ class ForvoGenerator(AudioGenerator):
             logger.error(f"Forvo cache lookup error: {e}")
             return None
 
+
+class QwenGenerator(AudioGenerator):
+    """Qwen speech synthesis generator."""
+
+    def __init__(self, api_key: str, cache_dir: Optional[str] = None, model: str = "sambert-zhichu-v1", voice: str = "zhichu"):
+        super().__init__(cache_dir)
+        self.api_key = api_key
+        self.model = model
+        self.voice = voice
+
+    def is_available(self) -> bool:
+        """Check if Qwen API is available."""
+        return bool(self.api_key)
+
+    def get_provider_name(self) -> str:
+        return "qwen"
+
+    def generate_audio(self, text: str, output_file: str) -> Optional[str]:
+        """Generate audio using Qwen TTS."""
+        if not self.is_available():
+            raise TTSProviderNotAvailable("Qwen API not available")
+
+        try:
+            import dashscope
+            from dashscope.api_entities.dashscope_response import SpeechSynthesisResponse
+
+            dashscope.api_key = self.api_key
+
+            response = dashscope.audio.qwen_tts.SpeechSynthesizer.call(model=self.model,
+                                text=text,
+                                voice=self.voice,
+                                format='mp3')
+
+            if response.get_audio_data() is not None:
+                with open(output_file, 'wb') as f:
+                    f.write(response.get_audio_data())
+                logger.info(f"Qwen downloaded audio for '{text}' to {output_file}")
+                return output_file
+            else:
+                logger.error(f"Qwen TTS error: No audio data in response for '{text}'")
+                return None
+
+        except ImportError:
+            logger.error("dashscope library not found. Please install it with 'pip install dashscope'")
+            return None
+        except Exception as e:
+            logger.error(f"Qwen TTS unexpected error: {e}")
+            return None
 
 class AudioGeneratorFactory:
     """Factory for creating audio generators."""
@@ -556,6 +621,16 @@ class AudioGeneratorFactory:
                 download_all_when_no_preferred=config.get("download_all_when_no_preferred", True),
                 interactive_selection=config.get("interactive_selection", True),
             )
+        elif provider == "qwen":
+            api_key = config.get("api_key")
+            if not api_key:
+                raise ValueError("Qwen API key is required")
+            return QwenGenerator(
+                api_key=api_key,
+                cache_dir=cache_dir,
+                model=config.get("model", "sambert-zhichu-v1"),
+                voice=config.get("voice", "zhichu"),
+            )
         else:
             raise ValueError(f"Unknown audio provider: {provider}")
 
@@ -564,10 +639,10 @@ class AudioGeneratorFactory:
         """Get list of available providers based on configuration."""
         available = []
 
-        for provider in ["forvo"]:
+        for provider in ["forvo", "qwen"]:
             try:
-                generator = AudioGeneratorFactory.create_generator(provider, config.get(provider, {}), cache_dir=None)
-                if generator.is_available():
+                # Check if the provider's config exists and has an api_key
+                if config.get(provider, {}).get("api_key"):
                     available.append(provider)
             except Exception:
                 pass
@@ -604,29 +679,56 @@ class MultiProviderAudioGenerator:
 
     def generate_audio(self, text: str, output_file: Optional[str] = None) -> Optional[str]:
         """Generate audio using the first available provider."""
-        for provider in self.providers:
+        # Create a copy of providers to allow modification
+        providers_to_try = self.providers.copy()
+
+        while providers_to_try:
+            provider = providers_to_try.pop(0)
             generator = self.generators.get(provider)
-            if generator:
-                try:
-                    # Get cache details if the generator supports it
-                    cache_details = None
-                    if hasattr(generator, "get_cache_details"):
-                        cache_details = generator.get_cache_details()
 
-                    result = generator.generate_with_cache(text, output_file, cache_details)
-                    if result:
-                        logger.info(f"Successfully generated audio for '{text}' using {provider}")
-                        return result
+            if not generator:
+                continue
+
+            try:
+                result = None
+                if isinstance(generator, ForvoGenerator):
+                    # Pass remaining providers as fallbacks
+                    fallback_providers = [p for p in providers_to_try if p in self.generators]
+                    result = generator.generate_with_cache(text, output_file, fallback_providers=fallback_providers)
+                else:
+                    result = generator.generate_with_cache(text, output_file)
+
+                # Handle fallback logic
+                if isinstance(result, dict) and "fallback_provider" in result:
+                    fallback_provider = result["fallback_provider"]
+
+                    if fallback_provider == "auto":
+                        # If Forvo fails automatically, try the next provider in the list
+                        logger.info(f"Forvo found no audio for '{text}', automatically trying next provider.")
+                        continue
                     else:
-                        # No result could mean user skipped or no pronunciation found
-                        if text not in self.skipped_words:
-                            self.skipped_words.append(text)
-                        logger.info(f"No audio generated for '{text}' using {provider}")
-                except Exception as e:
-                    logger.error(f"Provider '{provider}' failed for '{text}': {e}")
-                    continue
+                        # If user selected a fallback, use that specific provider next
+                        logger.info(f"User selected fallback provider '{fallback_provider}' for '{text}'.")
+                        if fallback_provider in providers_to_try:
+                            providers_to_try.insert(0, fallback_provider)
+                        continue
 
-        # All providers failed - also track as skipped
+                elif result:
+                    logger.info(f"Successfully generated audio for '{text}' using {provider}")
+                    return result
+                else:
+                    # This case handles when a user explicitly skips a word in Forvo
+                    if text not in self.skipped_words:
+                        self.skipped_words.append(text)
+                    logger.info(f"User skipped audio generation for '{text}' with {provider}")
+                    # If user skips, we stop trying other providers for this word
+                    return None
+
+            except Exception as e:
+                logger.error(f"Provider '{provider}' failed for '{text}': {e}")
+                continue
+
+        # All providers attempted and failed for non-skip reasons
         if text not in self.skipped_words:
             self.skipped_words.append(text)
         logger.error(f"All audio providers failed for '{text}'")

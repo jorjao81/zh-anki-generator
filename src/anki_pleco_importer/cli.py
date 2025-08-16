@@ -423,6 +423,7 @@ def load_audio_config(config_file: Optional[str] = None, verbose: bool = False) 
     # Load from environment variables (override file config)
     env_config = {
         "forvo": {"api_key": os.getenv("FORVO_API_KEY")},
+        "qwen": {"api_key": os.getenv("QWEN_API_KEY")},
     }
 
     # Merge environment config with file config
@@ -464,6 +465,7 @@ def cli() -> None:
     default="forvo",
     help="Audio provider (only Forvo supported for high-quality human pronunciation)",
 )
+@click.option("--qwen-tts", is_flag=True, help="Enable Qwen TTS as a fallback audio source.")
 @click.option(
     "--audio-config",
     type=click.Path(exists=True),
@@ -485,6 +487,7 @@ def convert(
     tsv_file: Path,
     audio: bool,
     audio_providers: str,
+    qwen_tts: bool,
     audio_config: Optional[str],
     audio_cache_dir: str,
     audio_dest_dir: Optional[str],
@@ -533,6 +536,8 @@ def convert(
             try:
                 config = load_audio_config(audio_config, verbose)
                 providers = [p.strip() for p in audio_providers.split(",")]
+                if qwen_tts:
+                    providers.append("qwen")
 
                 audio_generator = MultiProviderAudioGenerator(
                     providers=providers, config=config, cache_dir=audio_cache_dir
