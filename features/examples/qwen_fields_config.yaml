@@ -1,0 +1,15 @@
+global:
+  default_provider: "qwen"
+
+providers:
+  qwen:
+    api_key: "test-qwen-key"
+    base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+
+features:
+  field_generation:
+    multi_char:
+      provider: "qwen"
+      model: "qwen-turbo"
+      prompt: "ai_config/prompts/field_generation_multi_char.md"
+      temperature: 0.5
