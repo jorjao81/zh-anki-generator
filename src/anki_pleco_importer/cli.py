@@ -424,6 +424,10 @@ def load_audio_config(config_file: Optional[str] = None, verbose: bool = False) 
     env_config = {
         "forvo": {"api_key": os.getenv("FORVO_API_KEY")},
         "qwen": {"api_key": os.getenv("DASHSCOPE_API_KEY")},
+        "tencent": {
+            "secret_id": os.getenv("TENCENT_SECRET_ID"),
+            "secret_key": os.getenv("TENCENT_API_KEY")
+        },
     }
 
     # Merge environment config with file config
@@ -432,8 +436,8 @@ def load_audio_config(config_file: Optional[str] = None, verbose: bool = False) 
             config[provider] = {}
         config[provider].update({k: v for k, v in provider_config.items() if v is not None})
 
-    # Also apply environment config to nested providers (e.g., forvo_qwen)
-    for composite_provider in ["forvo_qwen"]:
+    # Also apply environment config to nested providers (e.g., forvo_qwen, forvo_multi_tts)
+    for composite_provider in ["forvo_qwen", "forvo_multi_tts"]:
         if composite_provider in config:
             for provider, provider_config in env_config.items():
                 if provider in config[composite_provider]:

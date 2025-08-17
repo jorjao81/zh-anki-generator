@@ -16,6 +16,12 @@
       "api_key": "your_dashscope_api_key_here",
       "voices": ["Chelsie", "Cherry", "Ethan", "Serena"]
     },
+    "tencent": {
+      "secret_id": "your_tencent_secret_id_here",
+      "secret_key": "your_tencent_secret_key_here",
+      "voices": [101052, 101053, 101054, 101001, 101002],
+      "region": "ap-singapore"
+    },
     "forvo_qwen": {
       "forvo": {
         "api_key": "your_forvo_api_key_here",
@@ -34,6 +40,31 @@
         "voices": ["Chelsie", "Cherry", "Ethan", "Serena"]
       },
       "enable_qwen_fallback": true
+    },
+    "forvo_multi_tts": {
+      "forvo": {
+        "api_key": "your_forvo_api_key_here",
+        "preferred_users": [
+          "liufeimagic",
+          "mouyao",
+          "darren8221",
+          "learnxuexi",
+          "Vincent930209"
+        ],
+        "download_all_when_no_preferred": false,
+        "interactive_selection": true
+      },
+      "qwen": {
+        "api_key": "your_dashscope_api_key_here",
+        "voices": ["Chelsie", "Cherry", "Ethan", "Serena"]
+      },
+      "tencent": {
+        "secret_id": "your_tencent_secret_id_here",
+        "secret_key": "your_tencent_secret_key_here",
+        "voices": [101052, 101053, 101054, 101001, 101002],
+        "region": "ap-singapore"
+      },
+      "enable_tts_fallback": true
     }
   }
 }
