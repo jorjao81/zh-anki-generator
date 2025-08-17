@@ -423,6 +423,7 @@ def load_audio_config(config_file: Optional[str] = None, verbose: bool = False) 
     # Load from environment variables (override file config)
     env_config = {
         "forvo": {"api_key": os.getenv("FORVO_API_KEY")},
+        "qwen": {"api_key": os.getenv("DASHSCOPE_API_KEY")},
     }
 
     # Merge environment config with file config
@@ -430,6 +431,13 @@ def load_audio_config(config_file: Optional[str] = None, verbose: bool = False) 
         if provider not in config:
             config[provider] = {}
         config[provider].update({k: v for k, v in provider_config.items() if v is not None})
+
+    # Also apply environment config to nested providers (e.g., forvo_qwen)
+    for composite_provider in ["forvo_qwen"]:
+        if composite_provider in config:
+            for provider, provider_config in env_config.items():
+                if provider in config[composite_provider]:
+                    config[composite_provider][provider].update({k: v for k, v in provider_config.items() if v is not None})
 
     return config
 

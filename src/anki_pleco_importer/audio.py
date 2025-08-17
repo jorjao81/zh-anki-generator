@@ -12,6 +12,9 @@ from typing import List, Dict, Optional, Any
 import logging
 
 import requests
+import dashscope
+from pydub import AudioSegment
+import io
 
 logger = logging.getLogger(__name__)
 
@@ -538,6 +541,369 @@ class ForvoGenerator(AudioGenerator):
             return None
 
 
+class QwenGenerator(AudioGenerator):
+    """Qwen TTS audio generator with multiple voice options."""
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        cache_dir: Optional[str] = None,
+        voices: Optional[List[str]] = None,
+    ):
+        super().__init__(cache_dir)
+        self.api_key = api_key or os.environ.get("DASHSCOPE_API_KEY")
+        self.voices = voices or ["Chelsie", "Cherry", "Ethan", "Serena"]
+        
+        # Set the API key for dashscope
+        if self.api_key:
+            dashscope.api_key = self.api_key
+
+    def is_available(self) -> bool:
+        """Check if Qwen TTS is available."""
+        return bool(self.api_key)
+
+    def get_provider_name(self) -> str:
+        return "qwen"
+
+    def generate_audio(self, text: str, output_file: str) -> Optional[str]:
+        """Generate audio using Qwen TTS with a single voice."""
+        if not self.is_available():
+            raise TTSProviderNotAvailable("Qwen TTS API not available")
+
+        try:
+            # Extract voice from output filename if it contains voice info
+            voice = "Cherry"  # default
+            for v in self.voices:
+                if v.lower() in output_file.lower():
+                    voice = v
+                    break
+
+            logger.info(f"Generating Qwen audio for '{text}' with voice '{voice}'")
+
+            response = dashscope.audio.qwen_tts.SpeechSynthesizer.call(
+                model="qwen-tts",
+                text=text,
+                voice=voice,
+            )
+
+            if not response.output or not response.output.audio:
+                logger.error(f"Qwen TTS failed for '{text}': No output audio")
+                return None
+
+            audio_url = response.output.audio["url"]
+            
+            # Download audio content
+            audio_response = requests.get(audio_url, timeout=30)
+            audio_response.raise_for_status()
+
+            # Convert WAV data to MP3 in memory
+            audio_data = io.BytesIO(audio_response.content)
+            audio = AudioSegment.from_wav(audio_data)
+            audio.export(output_file, format="mp3")
+
+            logger.info(f"Qwen audio generated for '{text}' with voice '{voice}' to {output_file}")
+            return output_file
+
+        except Exception as e:
+            logger.error(f"Qwen TTS error for '{text}': {e}")
+            return None
+
+    def generate_all_voices(self, text: str, base_output_dir: Optional[str] = None) -> Dict[str, Optional[str]]:
+        """Generate audio for all voices and return a mapping of voice -> file path."""
+        results = {}
+        
+        for voice in self.voices:
+            # Create filename using the specified format: WORDINCHINESE-qwen-VOICE.mp3
+            if base_output_dir:
+                output_file = os.path.join(base_output_dir, f"{text}-qwen-{voice}.mp3")
+            else:
+                output_file = str(self.cache_dir / f"{text}-qwen-{voice}.mp3")
+            
+            # Check cache first
+            if self._is_cached(text, voice):
+                cached_path = self._get_cached_path(text, voice)
+                if cached_path:
+                    results[voice] = cached_path
+                    logger.info(f"Using cached Qwen audio for '{text}' voice '{voice}'")
+                    continue
+            
+            try:
+                logger.info(f"Generating Qwen audio for '{text}' with voice '{voice}'")
+
+                response = dashscope.audio.qwen_tts.SpeechSynthesizer.call(
+                    model="qwen-tts",
+                    text=text,
+                    voice=voice,
+                )
+
+                if not response.output or not response.output.audio:
+                    logger.error(f"Qwen TTS failed for '{text}' voice '{voice}': No output audio")
+                    results[voice] = None
+                    continue
+
+                audio_url = response.output.audio["url"]
+                
+                # Download audio content
+                audio_response = requests.get(audio_url, timeout=30)
+                audio_response.raise_for_status()
+
+                # Convert WAV data to MP3 in memory
+                audio_data = io.BytesIO(audio_response.content)
+                audio = AudioSegment.from_wav(audio_data)
+                audio.export(output_file, format="mp3")
+
+                results[voice] = output_file
+                logger.info(f"Qwen audio generated for '{text}' voice '{voice}' to {output_file}")
+
+            except Exception as e:
+                logger.error(f"Qwen TTS error for '{text}' voice '{voice}': {e}")
+                results[voice] = None
+
+        return results
+
+
+class ForvoWithQwenFallbackGenerator(AudioGenerator):
+    """Forvo generator with Qwen TTS fallback when no preferred pronouncer is found."""
+
+    def __init__(
+        self,
+        forvo_config: Dict[str, Any],
+        qwen_config: Dict[str, Any],
+        cache_dir: Optional[str] = None,
+        enable_qwen_fallback: bool = True,
+    ):
+        super().__init__(cache_dir)
+        self.enable_qwen_fallback = enable_qwen_fallback
+        
+        # Initialize Forvo generator
+        self.forvo_generator = ForvoGenerator(
+            api_key=forvo_config.get("api_key"),
+            cache_dir=cache_dir,
+            use_paid_api=forvo_config.get("use_paid_api", True),
+            preferred_users=forvo_config.get("preferred_users", []),
+            download_all_when_no_preferred=False,  # We'll handle this ourselves
+            interactive_selection=forvo_config.get("interactive_selection", True),
+        )
+        
+        # Initialize Qwen generator if fallback is enabled
+        self.qwen_generator = None
+        if self.enable_qwen_fallback:
+            self.qwen_generator = QwenGenerator(
+                api_key=qwen_config.get("api_key"),
+                cache_dir=cache_dir,
+                voices=qwen_config.get("voices", ["Chelsie", "Cherry", "Ethan", "Serena"]),
+            )
+
+    def is_available(self) -> bool:
+        """Check if at least Forvo is available."""
+        return self.forvo_generator.is_available()
+
+    def get_provider_name(self) -> str:
+        return "forvo_qwen"
+
+    def _has_preferred_pronouncer(self, text: str) -> bool:
+        """Check if Forvo has a preferred pronouncer for the given text."""
+        if not self.forvo_generator.preferred_users:
+            return False
+            
+        try:
+            # Get pronunciation URL to check for preferred users
+            url = (
+                f"{self.forvo_generator.base_url}/key/{self.forvo_generator.api_key}/format/json/"
+                f"action/word-pronunciations/word/{text}/language/{self.forvo_generator.language}"
+            )
+            response = requests.get(url, timeout=10)
+
+            if response.status_code != 200:
+                return False
+
+            data = response.json()
+            pronunciations = data.get("items", [])
+            
+            # Check if any preferred users are available
+            for pronunciation in pronunciations:
+                if pronunciation.get("username") in self.forvo_generator.preferred_users:
+                    return True
+                    
+            return False
+
+        except Exception as e:
+            logger.warning(f"Failed to check for preferred pronouncer: {e}")
+            return False
+
+    def _get_enhanced_pronunciation_options(self, text: str) -> List[Dict[str, Any]]:
+        """Get all pronunciation options including Forvo and Qwen voices."""
+        options = []
+        
+        # Get Forvo pronunciations
+        try:
+            url = (
+                f"{self.forvo_generator.base_url}/key/{self.forvo_generator.api_key}/format/json/"
+                f"action/word-pronunciations/word/{text}/language/{self.forvo_generator.language}"
+            )
+            response = requests.get(url, timeout=10)
+
+            if response.status_code == 200:
+                data = response.json()
+                forvo_pronunciations = data.get("items", [])
+                
+                # Add Forvo pronunciations with type indicator
+                for pronunciation in forvo_pronunciations:
+                    pronunciation["source"] = "forvo"
+                    options.append(pronunciation)
+                    
+        except Exception as e:
+            logger.warning(f"Failed to get Forvo pronunciations: {e}")
+
+        # Add Qwen voices if available and fallback is enabled
+        if self.enable_qwen_fallback and self.qwen_generator and self.qwen_generator.is_available():
+            for voice in self.qwen_generator.voices:
+                qwen_option = {
+                    "source": "qwen",
+                    "voice": voice,
+                    "username": f"Qwen-{voice}",
+                    "pathmp3": None,  # Will be generated on demand
+                    "text": text,
+                }
+                options.append(qwen_option)
+
+        return options
+
+    def _enhanced_interactive_selection(self, options: List[Dict[str, Any]], text: str) -> Optional[Dict[str, Any]]:
+        """Enhanced interactive selection including Qwen voices."""
+        if not options:
+            return None
+            
+        print(f"\n🎵 {text} - Found {len(options)} pronunciation options:")
+
+        # Display options with enhanced formatting
+        for i, option in enumerate(options, 1):
+            if option["source"] == "forvo":
+                info = self.forvo_generator._format_pronunciation_info(option)
+                print(f"{i:2d}. [Forvo] {info}")
+            elif option["source"] == "qwen":
+                voice = option["voice"]
+                print(f"{i:2d}. [Qwen TTS] {voice} (AI-generated voice)")
+
+        print("\nCommands: <number> to play, s<number> to select, 's' to skip")
+        print("Example: '1' to play option 1, 's1' to select option 1, 's' to skip all")
+
+        preview_files = []  # Track temporary files for cleanup
+
+        try:
+            while True:
+                try:
+                    choice = input("\nChoice: ").strip().lower()
+
+                    if choice == "s":
+                        logger.info(f"User skipped pronunciation selection for '{text}'")
+                        return None
+
+                    # Handle selection commands (s1, s2, etc.)
+                    if choice.startswith("s") and len(choice) > 1:
+                        try:
+                            select_num = int(choice[1:])
+                            if 1 <= select_num <= len(options):
+                                selected = options[select_num - 1]
+                                source = selected["source"]
+                                if source == "forvo":
+                                    username = selected.get("username", "unknown")
+                                    logger.info(f"User selected Forvo pronunciation by '{username}' for '{text}'")
+                                elif source == "qwen":
+                                    voice = selected["voice"]
+                                    logger.info(f"User selected Qwen voice '{voice}' for '{text}'")
+                                return selected
+                            else:
+                                print(f"Please enter a number between 1 and {len(options)}")
+                        except ValueError:
+                            print("Invalid selection command. Use format: s1, s2, etc.")
+                        continue
+
+                    # Handle play commands (1, 2, etc.)
+                    try:
+                        play_num = int(choice)
+                        if 1 <= play_num <= len(options):
+                            option = options[play_num - 1]
+                            
+                            if option["source"] == "forvo":
+                                username = option.get("username", "unknown")
+                                print(f"🔊 Downloading and playing Forvo pronunciation by {username}...")
+                                
+                                # Download to temporary file using Forvo's method
+                                temp_file = self.forvo_generator._download_pronunciation_preview(option, text)
+                                if temp_file:
+                                    preview_files.append(temp_file)
+                                    if self.forvo_generator._play_audio(temp_file):
+                                        print(f"✅ Played Forvo pronunciation by {username}")
+                                    else:
+                                        print("❌ Could not play audio (file downloaded but playback failed)")
+                                else:
+                                    print("❌ Could not download Forvo audio for preview")
+                                    
+                            elif option["source"] == "qwen":
+                                voice = option["voice"]
+                                print(f"🔊 Generating and playing Qwen voice {voice}...")
+                                
+                                # Generate Qwen audio using cache (so we don't call API twice)
+                                cache_details = voice  # Just the voice name, provider is already added by _get_cache_filename
+                                result = self.qwen_generator.generate_with_cache(text, cache_details=cache_details)
+                                if result:
+                                    if self.forvo_generator._play_audio(result):
+                                        print(f"✅ Played Qwen voice {voice}")
+                                    else:
+                                        print("❌ Could not play audio (file generated but playback failed)")
+                                else:
+                                    print("❌ Could not generate Qwen audio for preview")
+                        else:
+                            print(f"Please enter a number between 1 and {len(options)}")
+                    except ValueError:
+                        print("Invalid input. Use: number to play, s<number> to select, 's' to skip")
+
+                except KeyboardInterrupt:
+                    print("\nSkipping pronunciation selection...")
+                    return None
+        finally:
+            # Clean up temporary preview files
+            if preview_files:
+                self.forvo_generator._cleanup_preview_files(preview_files)
+
+    def generate_audio(self, text: str, output_file: str) -> Optional[str]:
+        """Generate audio with Forvo preferred user priority and Qwen fallback."""
+        if not self.is_available():
+            raise TTSProviderNotAvailable("Forvo API not available")
+
+        # First, check if we have a preferred pronouncer in Forvo
+        if self._has_preferred_pronouncer(text):
+            logger.info(f"Found preferred Forvo pronouncer for '{text}', using Forvo")
+            return self.forvo_generator.generate_audio(text, output_file)
+
+        # No preferred pronouncer found, show enhanced selection with Qwen options
+        if self.enable_qwen_fallback and self.forvo_generator.interactive_selection:
+            options = self._get_enhanced_pronunciation_options(text)
+            if options:
+                selected = self._enhanced_interactive_selection(options, text)
+                if selected:
+                    if selected["source"] == "forvo":
+                        # Use the selected Forvo pronunciation
+                        self.forvo_generator._cached_selection = selected
+                        return self.forvo_generator.generate_audio(text, output_file)
+                    elif selected["source"] == "qwen":
+                        # Generate with selected Qwen voice (use cache to avoid duplicate API calls)
+                        voice = selected["voice"]
+                        cache_details = voice  # Just the voice name, provider is already added by _get_cache_filename
+                        # Ensure the output file includes the voice name for proper generation
+                        voice_output_file = output_file.replace(".mp3", f"-qwen-{voice}.mp3")
+                        return self.qwen_generator.generate_with_cache(text, voice_output_file, cache_details)
+                else:
+                    # User explicitly skipped - don't fall back, they already saw all options
+                    logger.info(f"User skipped pronunciation selection for '{text}' - no fallback")
+                    return None
+
+        # If interactive selection is disabled, fall back to standard Forvo behavior
+        logger.info(f"Interactive selection disabled for '{text}', using standard Forvo")
+        return self.forvo_generator.generate_audio(text, output_file)
+
+
 class AudioGeneratorFactory:
     """Factory for creating audio generators."""
 
@@ -556,6 +922,34 @@ class AudioGeneratorFactory:
                 download_all_when_no_preferred=config.get("download_all_when_no_preferred", True),
                 interactive_selection=config.get("interactive_selection", True),
             )
+        elif provider == "qwen":
+            api_key = config.get("api_key")
+            return QwenGenerator(
+                api_key=api_key,
+                cache_dir=cache_dir,
+                voices=config.get("voices", ["Chelsie", "Cherry", "Ethan", "Serena"]),
+            )
+        elif provider == "forvo_qwen":
+            # This provider requires both forvo and qwen configs
+            # Check if configs are nested under forvo_qwen or at top level
+            if "forvo" in config and "qwen" in config:
+                # Nested configuration
+                forvo_config = config.get("forvo", {})
+                qwen_config = config.get("qwen", {})
+                enable_qwen_fallback = config.get("enable_qwen_fallback", True)
+            else:
+                # Top-level configuration - get from parent config
+                # This will be passed from the CLI when it extracts forvo_qwen config
+                forvo_config = config.get("forvo", {})
+                qwen_config = config.get("qwen", {})
+                enable_qwen_fallback = config.get("enable_qwen_fallback", True)
+            
+            return ForvoWithQwenFallbackGenerator(
+                forvo_config=forvo_config,
+                qwen_config=qwen_config,
+                cache_dir=cache_dir,
+                enable_qwen_fallback=enable_qwen_fallback,
+            )
         else:
             raise ValueError(f"Unknown audio provider: {provider}")
 
@@ -564,7 +958,7 @@ class AudioGeneratorFactory:
         """Get list of available providers based on configuration."""
         available = []
 
-        for provider in ["forvo"]:
+        for provider in ["forvo", "qwen", "forvo_qwen"]:
             try:
                 generator = AudioGeneratorFactory.create_generator(provider, config.get(provider, {}), cache_dir=None)
                 if generator.is_available():

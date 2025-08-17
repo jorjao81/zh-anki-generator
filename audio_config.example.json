@@ -11,6 +11,29 @@
       ],
       "download_all_when_no_preferred": true,
       "interactive_selection": true
+    },
+    "qwen": {
+      "api_key": "your_dashscope_api_key_here",
+      "voices": ["Chelsie", "Cherry", "Ethan", "Serena"]
+    },
+    "forvo_qwen": {
+      "forvo": {
+        "api_key": "your_forvo_api_key_here",
+        "preferred_users": [
+          "liufeimagic",
+          "mouyao",
+          "darren8221",
+          "learnxuexi",
+          "Vincent930209"
+        ],
+        "download_all_when_no_preferred": false,
+        "interactive_selection": true
+      },
+      "qwen": {
+        "api_key": "your_dashscope_api_key_here",
+        "voices": ["Chelsie", "Cherry", "Ethan", "Serena"]
+      },
+      "enable_qwen_fallback": true
     }
   }
 }
