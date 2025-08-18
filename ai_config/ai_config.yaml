@@ -19,6 +19,10 @@ providers:
   gemini:
     api_key: null  # Will use environment variable GEMINI_API_KEY if null
     base_url: null  # Optional custom API endpoint
+    
+  deepseek:
+    api_key: null  # Will use environment variable DEEPSEEK_API_KEY if null
+    base_url: "https://api.deepseek.com"  # DeepSeek API endpoint
 
 # Configuration examples (reusable templates)
 examples:
@@ -99,13 +103,15 @@ features:
       model: "gpt-5-mini"
       prompt: "ai_config/prompts/examples_formatter_multi_char.md"
       temperature: 1.0
-      max_tokens: 400
+      max_tokens: 2000
       
   # Word classification for EPUB analysis
   word_classifier:
-    provider: "deepseek"                   # "standard", "gpt", or "gemini"
-    model: "deepseek-chat"
+    provider: "gpt"                    # "standard", "gpt", or "gemini"
+    model: "gpt-5-mini"
+    temperature: 1.0
     prompt: "ai_config/prompts/word_classifier.md"
+    max_tokens: 1000
     
     # Fallback models for when primary model returns "unknown"
     # fallback_models:

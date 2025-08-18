@@ -138,7 +138,7 @@ class UnifiedWordClassifier:
         
         # If result is unknown, try fallback models
         if result and result.classification == 'unknown':
-            fallback_configs = self._config.get('fallback_models', [])
+            fallback_configs = self._config.get('fallback_models', []) or []
             for fallback_config in fallback_configs:
                 try:
                     result = self._classify_with_config(word, fallback_config)
@@ -216,35 +216,48 @@ class UnifiedWordClassifier:
                         reasoning_effort=config.get('reasoning_effort', 'medium'),
                     )
                 else:
-                    # Use structured output if enabled (for GPT and DeepSeek)
+                    # Use structured output if enabled
                     if config.get('use_structured_output', True):
-                        response = client.chat.completions.create(
-                            model=model,
-                            messages=[
-                                {"role": "system", "content": prompt},
-                                {"role": "user", "content": word}
-                            ],
-                            max_completion_tokens=config.get('max_tokens', 200),
-                            response_format={
-                                "type": "json_schema",
-                                "json_schema": {
-                                    "name": "word_classification",
-                                    "strict": True,
-                                    "schema": {
-                                        "type": "object",
-                                        "properties": {
-                                            "definition": {"type": "string"},
-                                            "classification": {
-                                                "type": "string",
-                                                "enum": ["worth_learning", "compositional", "not_a_word", "proper_name"]
-                                            }
-                                        },
-                                        "required": ["definition", "classification"],
-                                        "additionalProperties": False
+                        if provider == 'deepseek':
+                            # DeepSeek uses json_object mode, not json_schema
+                            response = client.chat.completions.create(
+                                model=model,
+                                messages=[
+                                    {"role": "system", "content": prompt},
+                                    {"role": "user", "content": word}
+                                ],
+                                max_completion_tokens=config.get('max_tokens', 200),
+                                response_format={"type": "json_object"}
+                            )
+                        else:
+                            # GPT uses json_schema mode
+                            response = client.chat.completions.create(
+                                model=model,
+                                messages=[
+                                    {"role": "system", "content": prompt},
+                                    {"role": "user", "content": word}
+                                ],
+                                max_completion_tokens=config.get('max_tokens', 200),
+                                response_format={
+                                    "type": "json_schema",
+                                    "json_schema": {
+                                        "name": "word_classification",
+                                        "strict": True,
+                                        "schema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "definition": {"type": "string"},
+                                                "classification": {
+                                                    "type": "string",
+                                                    "enum": ["worth_learning", "compositional", "not_a_word", "proper_name"]
+                                                }
+                                            },
+                                            "required": ["definition", "classification"],
+                                            "additionalProperties": False
+                                        }
                                     }
                                 }
-                            }
-                        )
+                            )
                     else:
                         response = client.chat.completions.create(
                             model=model,
@@ -289,14 +302,28 @@ class UnifiedWordClassifier:
             
             # Parse JSON response
             try:
-                result = json.loads(response_text)
+                # Clean up response text - remove markdown code blocks if present
+                clean_text = response_text.strip()
+                if clean_text.startswith('```json'):
+                    clean_text = clean_text[7:]  # Remove ```json
+                if clean_text.startswith('```'):
+                    clean_text = clean_text[3:]  # Remove ```
+                if clean_text.endswith('```'):
+                    clean_text = clean_text[:-3]  # Remove ```
+                clean_text = clean_text.strip()
+                
+                result = json.loads(clean_text)
                 return WordClassification(
                     word=word,
                     definition=result.get('definition', 'unknown'),
                     classification=result.get('classification', 'unknown')
                 )
-            except json.JSONDecodeError:
+            except json.JSONDecodeError as e:
                 # Fallback parsing if JSON is malformed
+                import logging
+                logging.error(f"JSON parse error for word '{word}': {e}")
+                logging.error(f"Response text: '{response_text}'")
+                logging.error(f"Response length: {len(response_text)}")
                 return WordClassification(
                     word=word,
                     definition='parse_error',

@@ -722,7 +722,9 @@ def convert(
 
                         audio_file = audio_generator.generate_audio(anki_card.simplified)
                         if audio_file:
-                            anki_card.pronunciation = audio_file
+                            # Format as Anki sound field: [sound:filename.mp3]
+                            filename = os.path.basename(audio_file)
+                            anki_card.pronunciation = f"[sound:{filename}]"
                             if verbose:
                                 click.echo(f"    Audio saved to: {audio_file}")
 
