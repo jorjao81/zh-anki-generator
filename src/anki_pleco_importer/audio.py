@@ -24,6 +24,9 @@ from tencentcloud.tts.v20190823 import tts_client, models
 
 logger = logging.getLogger(__name__)
 
+# Audio normalization target
+TARGET_DBFS = -15.0
+
 
 class AudioGeneratorError(Exception):
     """Base exception for audio generation errors."""
@@ -74,6 +77,34 @@ class AudioGenerator(ABC):
         """Get path to cached audio file."""
         cache_file = self._get_cache_filename(text, provider, details)
         return str(cache_file) if cache_file.exists() else None
+
+    def _normalize_audio_volume(self, audio_file: str, target_dbfs: float = TARGET_DBFS) -> None:
+        """Normalize audio volume to target dBFS level."""
+        try:
+            logger.debug(f"Normalizing audio volume for {audio_file} to {target_dbfs} dBFS")
+
+            # Load the audio file
+            audio = AudioSegment.from_file(audio_file)
+
+            # Calculate the gain adjustment needed
+            current_dbfs = audio.dBFS
+            gain_adjustment = target_dbfs - current_dbfs
+
+            logger.debug(f"Current volume: {current_dbfs:.2f} dBFS, adjustment: {gain_adjustment:.2f} dB")
+
+            # Apply gain adjustment if needed
+            if abs(gain_adjustment) > 0.1:  # Only adjust if difference is significant
+                normalized_audio = audio.apply_gain(gain_adjustment)
+
+                # Export back to the same file
+                normalized_audio.export(audio_file, format="mp3")
+                logger.info(f"Normalized audio volume: {current_dbfs:.2f} → {target_dbfs:.2f} dBFS")
+            else:
+                logger.debug(f"Audio already at target volume ({current_dbfs:.2f} dBFS), no adjustment needed")
+
+        except Exception as e:
+            logger.warning(f"Failed to normalize audio volume for {audio_file}: {e}")
+            # Don't raise - normalization failure shouldn't break audio generation
 
     @abstractmethod
     def generate_audio(self, text: str, output_file: str) -> Optional[str]:
@@ -485,6 +516,9 @@ class ForvoGenerator(AudioGenerator):
             with open(output_file, "wb") as f:
                 f.write(audio_response.content)
 
+            # Normalize audio volume
+            self._normalize_audio_volume(output_file)
+
             logger.info(f"Forvo downloaded audio for '{text}' by '{username}' to {output_file}")
             return output_file
 
@@ -559,7 +593,7 @@ class QwenGenerator(AudioGenerator):
         super().__init__(cache_dir)
         self.api_key = api_key or os.environ.get("DASHSCOPE_API_KEY")
         self.voices = voices or ["Chelsie", "Cherry", "Ethan", "Serena"]
-        
+
         # Set the API key for dashscope
         if self.api_key:
             dashscope.api_key = self.api_key
@@ -597,7 +631,7 @@ class QwenGenerator(AudioGenerator):
                 return None
 
             audio_url = response.output.audio["url"]
-            
+
             # Download audio content
             audio_response = requests.get(audio_url, timeout=30)
             audio_response.raise_for_status()
@@ -606,6 +640,9 @@ class QwenGenerator(AudioGenerator):
             audio_data = io.BytesIO(audio_response.content)
             audio = AudioSegment.from_wav(audio_data)
             audio.export(output_file, format="mp3")
+
+            # Normalize audio volume
+            self._normalize_audio_volume(output_file)
 
             logger.info(f"Qwen audio generated for '{text}' with voice '{voice}' to {output_file}")
             return output_file
@@ -617,14 +654,14 @@ class QwenGenerator(AudioGenerator):
     def generate_all_voices(self, text: str, base_output_dir: Optional[str] = None) -> Dict[str, Optional[str]]:
         """Generate audio for all voices and return a mapping of voice -> file path."""
         results = {}
-        
+
         for voice in self.voices:
             # Create filename using the specified format: WORDINCHINESE-qwen-VOICE.mp3
             if base_output_dir:
                 output_file = os.path.join(base_output_dir, f"{text}-qwen-{voice}.mp3")
             else:
                 output_file = str(self.cache_dir / f"{text}-qwen-{voice}.mp3")
-            
+
             # Check cache first
             if self._is_cached(text, voice):
                 cached_path = self._get_cached_path(text, voice)
@@ -632,7 +669,7 @@ class QwenGenerator(AudioGenerator):
                     results[voice] = cached_path
                     logger.info(f"Using cached Qwen audio for '{text}' voice '{voice}'")
                     continue
-            
+
             try:
                 logger.info(f"Generating Qwen audio for '{text}' with voice '{voice}'")
 
@@ -648,7 +685,7 @@ class QwenGenerator(AudioGenerator):
                     continue
 
                 audio_url = response.output.audio["url"]
-                
+
                 # Download audio content
                 audio_response = requests.get(audio_url, timeout=30)
                 audio_response.raise_for_status()
@@ -657,6 +694,9 @@ class QwenGenerator(AudioGenerator):
                 audio_data = io.BytesIO(audio_response.content)
                 audio = AudioSegment.from_wav(audio_data)
                 audio.export(output_file, format="mp3")
+
+                # Normalize audio volume
+                self._normalize_audio_volume(output_file)
 
                 results[voice] = output_file
                 logger.info(f"Qwen audio generated for '{text}' voice '{voice}' to {output_file}")
@@ -684,14 +724,8 @@ class TencentGenerator(AudioGenerator):
         self.secret_key = secret_key or os.environ.get("TENCENT_API_KEY")
         self.region = region
         self.voices = voices or [101052, 101053, 101054, 101001, 101002]  # Default 5 voices
-        
-        self.voice_names = {
-            101052: "zhiwei",
-            101053: "zhifang", 
-            101054: "zhiyou",
-            101001: "zhiyu",
-            101002: "zhiling"
-        }
+
+        self.voice_names = {101052: "zhiwei", 101053: "zhifang", 101054: "zhiyou", 101001: "zhiyu", 101002: "zhiling"}
 
     def is_available(self) -> bool:
         """Check if Tencent TTS is available."""
@@ -718,17 +752,17 @@ class TencentGenerator(AudioGenerator):
 
             # Create credential object
             cred = credential.Credential(self.secret_id, self.secret_key)
-            
+
             # Configure client
             httpProfile = HttpProfile()
             httpProfile.endpoint = "tts.tencentcloudapi.com"
-            
+
             clientProfile = ClientProfile()
             clientProfile.httpProfile = httpProfile
-            
+
             # Create TTS client
             client = tts_client.TtsClient(cred, self.region, clientProfile)
-            
+
             # Create request
             req = models.TextToVoiceRequest()
             req.Text = text
@@ -736,10 +770,10 @@ class TencentGenerator(AudioGenerator):
             req.Codec = "mp3"
             req.SampleRate = 16000
             req.SessionId = f"tts_session_{random.randint(100000, 999999)}"
-            
+
             # Call API
             resp = client.TextToVoice(req)
-            
+
             if not resp.Audio:
                 logger.error(f"Tencent TTS failed for '{text}': No output audio")
                 return None
@@ -747,11 +781,16 @@ class TencentGenerator(AudioGenerator):
             # Get audio data (base64 encoded) and save directly as MP3
             audio_base64 = resp.Audio
             audio_data = base64.b64decode(audio_base64)
-            
-            with open(output_file, 'wb') as f:
+
+            with open(output_file, "wb") as f:
                 f.write(audio_data)
 
-            logger.info(f"Tencent audio generated for '{text}' with voice '{self.voice_names.get(voice, voice)}' to {output_file}")
+            # Normalize audio volume
+            self._normalize_audio_volume(output_file)
+
+            logger.info(
+                f"Tencent audio generated for '{text}' with voice '{self.voice_names.get(voice, voice)}' to {output_file}"
+            )
             return output_file
 
         except Exception as e:
@@ -761,16 +800,16 @@ class TencentGenerator(AudioGenerator):
     def generate_all_voices(self, text: str, base_output_dir: Optional[str] = None) -> Dict[str, Optional[str]]:
         """Generate audio for all voices and return a mapping of voice -> file path."""
         results = {}
-        
+
         for voice_id in self.voices:
             voice_name = self.voice_names.get(voice_id, str(voice_id))
-            
+
             # Create filename using the specified format: WORDINCHINESE-tencent-VOICE.mp3
             if base_output_dir:
                 output_file = os.path.join(base_output_dir, f"{text}-tencent-{voice_name}.mp3")
             else:
                 output_file = str(self.cache_dir / f"{text}-tencent-{voice_name}.mp3")
-            
+
             # Check cache first
             if self._is_cached(text, voice_name):
                 cached_path = self._get_cached_path(text, voice_name)
@@ -778,23 +817,23 @@ class TencentGenerator(AudioGenerator):
                     results[voice_name] = cached_path
                     logger.info(f"Using cached Tencent audio for '{text}' voice '{voice_name}'")
                     continue
-            
+
             try:
                 logger.info(f"Generating Tencent audio for '{text}' with voice '{voice_name}'")
 
                 # Create credential object
                 cred = credential.Credential(self.secret_id, self.secret_key)
-                
+
                 # Configure client
                 httpProfile = HttpProfile()
                 httpProfile.endpoint = "tts.tencentcloudapi.com"
-                
+
                 clientProfile = ClientProfile()
                 clientProfile.httpProfile = httpProfile
-                
+
                 # Create TTS client
                 client = tts_client.TtsClient(cred, self.region, clientProfile)
-                
+
                 # Create request
                 req = models.TextToVoiceRequest()
                 req.Text = text
@@ -802,10 +841,10 @@ class TencentGenerator(AudioGenerator):
                 req.Codec = "mp3"
                 req.SampleRate = 16000
                 req.SessionId = f"tts_session_{random.randint(100000, 999999)}"
-                
+
                 # Call API
                 resp = client.TextToVoice(req)
-                
+
                 if not resp.Audio:
                     logger.error(f"Tencent TTS failed for '{text}' voice '{voice_name}': No output audio")
                     results[voice_name] = None
@@ -814,9 +853,12 @@ class TencentGenerator(AudioGenerator):
                 # Get audio data (base64 encoded) and save directly as MP3
                 audio_base64 = resp.Audio
                 audio_data = base64.b64decode(audio_base64)
-                
-                with open(output_file, 'wb') as f:
+
+                with open(output_file, "wb") as f:
                     f.write(audio_data)
+
+                # Normalize audio volume
+                self._normalize_audio_volume(output_file)
 
                 results[voice_name] = output_file
                 logger.info(f"Tencent audio generated for '{text}' voice '{voice_name}' to {output_file}")
@@ -840,7 +882,7 @@ class ForvoWithQwenFallbackGenerator(AudioGenerator):
     ):
         super().__init__(cache_dir)
         self.enable_qwen_fallback = enable_qwen_fallback
-        
+
         # Initialize Forvo generator
         self.forvo_generator = ForvoGenerator(
             api_key=forvo_config.get("api_key"),
@@ -850,7 +892,7 @@ class ForvoWithQwenFallbackGenerator(AudioGenerator):
             download_all_when_no_preferred=False,  # We'll handle this ourselves
             interactive_selection=forvo_config.get("interactive_selection", True),
         )
-        
+
         # Initialize Qwen generator if fallback is enabled
         self.qwen_generator = None
         if self.enable_qwen_fallback:
@@ -871,7 +913,7 @@ class ForvoWithQwenFallbackGenerator(AudioGenerator):
         """Check if Forvo has a preferred pronouncer for the given text."""
         if not self.forvo_generator.preferred_users:
             return False
-            
+
         try:
             # Get pronunciation URL to check for preferred users
             url = (
@@ -885,12 +927,12 @@ class ForvoWithQwenFallbackGenerator(AudioGenerator):
 
             data = response.json()
             pronunciations = data.get("items", [])
-            
+
             # Check if any preferred users are available
             for pronunciation in pronunciations:
                 if pronunciation.get("username") in self.forvo_generator.preferred_users:
                     return True
-                    
+
             return False
 
         except Exception as e:
@@ -900,7 +942,7 @@ class ForvoWithQwenFallbackGenerator(AudioGenerator):
     def _get_enhanced_pronunciation_options(self, text: str) -> List[Dict[str, Any]]:
         """Get all pronunciation options including Forvo and Qwen voices."""
         options = []
-        
+
         # Get Forvo pronunciations
         try:
             url = (
@@ -912,12 +954,12 @@ class ForvoWithQwenFallbackGenerator(AudioGenerator):
             if response.status_code == 200:
                 data = response.json()
                 forvo_pronunciations = data.get("items", [])
-                
+
                 # Add Forvo pronunciations with type indicator
                 for pronunciation in forvo_pronunciations:
                     pronunciation["source"] = "forvo"
                     options.append(pronunciation)
-                    
+
         except Exception as e:
             logger.warning(f"Failed to get Forvo pronunciations: {e}")
 
@@ -939,7 +981,7 @@ class ForvoWithQwenFallbackGenerator(AudioGenerator):
         """Enhanced interactive selection including Qwen voices."""
         if not options:
             return None
-            
+
         print(f"\n🎵 {text} - Found {len(options)} pronunciation options:")
 
         # Display options with enhanced formatting
@@ -990,11 +1032,11 @@ class ForvoWithQwenFallbackGenerator(AudioGenerator):
                         play_num = int(choice)
                         if 1 <= play_num <= len(options):
                             option = options[play_num - 1]
-                            
+
                             if option["source"] == "forvo":
                                 username = option.get("username", "unknown")
                                 print(f"🔊 Downloading and playing Forvo pronunciation by {username}...")
-                                
+
                                 # Download to temporary file using Forvo's method
                                 temp_file = self.forvo_generator._download_pronunciation_preview(option, text)
                                 if temp_file:
@@ -1005,13 +1047,15 @@ class ForvoWithQwenFallbackGenerator(AudioGenerator):
                                         print("❌ Could not play audio (file downloaded but playback failed)")
                                 else:
                                     print("❌ Could not download Forvo audio for preview")
-                                    
+
                             elif option["source"] == "qwen":
                                 voice = option["voice"]
                                 print(f"🔊 Generating and playing Qwen voice {voice}...")
-                                
+
                                 # Generate Qwen audio using cache (so we don't call API twice)
-                                cache_details = voice  # Just the voice name, provider is already added by _get_cache_filename
+                                cache_details = (
+                                    voice  # Just the voice name, provider is already added by _get_cache_filename
+                                )
                                 result = self.qwen_generator.generate_with_cache(text, cache_details=cache_details)
                                 if result:
                                     if self.forvo_generator._play_audio(result):
@@ -1083,7 +1127,7 @@ class ForvoWithMultipleTTSFallbackGenerator(AudioGenerator):
     ):
         super().__init__(cache_dir)
         self.enable_tts_fallback = enable_tts_fallback
-        
+
         # Initialize Forvo generator
         self.forvo_generator = ForvoGenerator(
             api_key=forvo_config.get("api_key"),
@@ -1093,11 +1137,11 @@ class ForvoWithMultipleTTSFallbackGenerator(AudioGenerator):
             download_all_when_no_preferred=False,  # We'll handle this ourselves
             interactive_selection=forvo_config.get("interactive_selection", True),
         )
-        
+
         # Initialize TTS generators if fallback is enabled
         self.qwen_generator = None
         self.tencent_generator = None
-        
+
         if self.enable_tts_fallback:
             if qwen_config.get("api_key"):
                 self.qwen_generator = QwenGenerator(
@@ -1105,7 +1149,7 @@ class ForvoWithMultipleTTSFallbackGenerator(AudioGenerator):
                     cache_dir=cache_dir,
                     voices=qwen_config.get("voices", ["Chelsie", "Cherry", "Ethan", "Serena"]),
                 )
-            
+
             if tencent_config.get("secret_id") and tencent_config.get("secret_key"):
                 self.tencent_generator = TencentGenerator(
                     secret_id=tencent_config.get("secret_id"),
@@ -1126,7 +1170,7 @@ class ForvoWithMultipleTTSFallbackGenerator(AudioGenerator):
         """Check if Forvo has a preferred pronouncer for the given text."""
         if not self.forvo_generator.preferred_users:
             return False
-            
+
         try:
             # Get pronunciation URL to check for preferred users
             url = (
@@ -1140,12 +1184,12 @@ class ForvoWithMultipleTTSFallbackGenerator(AudioGenerator):
 
             data = response.json()
             pronunciations = data.get("items", [])
-            
+
             # Check if any preferred users are available
             for pronunciation in pronunciations:
                 if pronunciation.get("username") in self.forvo_generator.preferred_users:
                     return True
-                    
+
             return False
 
         except Exception as e:
@@ -1155,7 +1199,7 @@ class ForvoWithMultipleTTSFallbackGenerator(AudioGenerator):
     def _get_all_pronunciation_options(self, text: str) -> List[Dict[str, Any]]:
         """Get all pronunciation options including Forvo, Qwen, and Tencent voices."""
         options = []
-        
+
         # Get Forvo pronunciations
         try:
             url = (
@@ -1167,12 +1211,12 @@ class ForvoWithMultipleTTSFallbackGenerator(AudioGenerator):
             if response.status_code == 200:
                 data = response.json()
                 forvo_pronunciations = data.get("items", [])
-                
+
                 # Add Forvo pronunciations with type indicator
                 for pronunciation in forvo_pronunciations:
                     pronunciation["source"] = "forvo"
                     options.append(pronunciation)
-                    
+
         except Exception as e:
             logger.warning(f"Failed to get Forvo pronunciations: {e}")
 
@@ -1208,7 +1252,7 @@ class ForvoWithMultipleTTSFallbackGenerator(AudioGenerator):
         """Enhanced interactive selection including Qwen and Tencent voices."""
         if not options:
             return None
-            
+
         print(f"\n🎵 {text} - Found {len(options)} pronunciation options:")
 
         # Display options with enhanced formatting
@@ -1265,11 +1309,11 @@ class ForvoWithMultipleTTSFallbackGenerator(AudioGenerator):
                         play_num = int(choice)
                         if 1 <= play_num <= len(options):
                             option = options[play_num - 1]
-                            
+
                             if option["source"] == "forvo":
                                 username = option.get("username", "unknown")
                                 print(f"🔊 Downloading and playing Forvo pronunciation by {username}...")
-                                
+
                                 # Download to temporary file using Forvo's method
                                 temp_file = self.forvo_generator._download_pronunciation_preview(option, text)
                                 if temp_file:
@@ -1280,11 +1324,11 @@ class ForvoWithMultipleTTSFallbackGenerator(AudioGenerator):
                                         print("❌ Could not play audio (file downloaded but playback failed)")
                                 else:
                                     print("❌ Could not download Forvo audio for preview")
-                                    
+
                             elif option["source"] == "qwen":
                                 voice = option["voice"]
                                 print(f"🔊 Generating and playing Qwen voice {voice}...")
-                                
+
                                 # Generate Qwen audio using cache (so we don't call API twice)
                                 cache_details = voice  # Just the voice name
                                 result = self.qwen_generator.generate_with_cache(text, cache_details=cache_details)
@@ -1295,11 +1339,11 @@ class ForvoWithMultipleTTSFallbackGenerator(AudioGenerator):
                                         print("❌ Could not play audio (file generated but playback failed)")
                                 else:
                                     print("❌ Could not generate Qwen audio for preview")
-                                    
+
                             elif option["source"] == "tencent":
                                 voice = option["voice"]
                                 print(f"🔊 Generating and playing Tencent voice {voice}...")
-                                
+
                                 # Generate Tencent audio using cache (so we don't call API twice)
                                 cache_details = voice  # Just the voice name
                                 result = self.tencent_generator.generate_with_cache(text, cache_details=cache_details)
@@ -1416,7 +1460,7 @@ class AudioGeneratorFactory:
                 forvo_config = config.get("forvo", {})
                 qwen_config = config.get("qwen", {})
                 enable_qwen_fallback = config.get("enable_qwen_fallback", True)
-            
+
             return ForvoWithQwenFallbackGenerator(
                 forvo_config=forvo_config,
                 qwen_config=qwen_config,
