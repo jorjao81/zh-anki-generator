@@ -76,20 +76,20 @@ class AnkiExportParser:
         """Create AnkiCard from parts, handling different note type formats."""
         if not parts:
             return None
-            
+
         # Determine note type - could be in different positions
         notetype = ""
-        
+
         # Try to identify the note type
         for i, part in enumerate(parts):
             if part in ["Chinese", "Chinese 2"]:
                 notetype = part
                 break
-        
+
         # If we can't identify the note type, assume it's in the first position (legacy format)
         if not notetype:
             notetype = parts[0] if len(parts) > 0 else ""
-        
+
         # Handle different field mappings based on note type
         if notetype == "Chinese 2":
             # Chinese 2 format: [notetype, characters, pinyin, audio, definition, ?, ?, components, ?, ...]

@@ -42,46 +42,49 @@ logger = logging.getLogger(__name__)
 
 class WordClassification(NamedTuple):
     """AI-powered classification and definition of a Chinese word."""
+
     word: str
     definition: str  # Short English definition
     classification: str  # "worth_learning", "compositional", "not_a_word", "proper_name"
-    
-    
+
+
 class WordClassifier:
     """Classify and define Chinese words using AI models."""
-    
+
     # Classification categories
     WORTH_LEARNING = "worth_learning"
-    COMPOSITIONAL = "compositional" 
+    COMPOSITIONAL = "compositional"
     NOT_A_WORD = "not_a_word"
     PROPER_NAME = "proper_name"
-    
+
     def __init__(self, model_type: str = "gpt", model_name: str = "gpt-4o-mini", api_key: Optional[str] = None):
         """
         Initialize word classifier.
-        
+
         Args:
-            model_type: "gpt" or "gemini"  
+            model_type: "gpt" or "gemini"
             model_name: Specific model to use (defaults to gpt-4o-mini for reliability)
             api_key: API key for the service
-            
+
         Note:
             GPT-5 nano may have compatibility issues with structured responses.
             Use gpt-4o-mini for best reliability and cost balance.
         """
         self.model_type = model_type.lower()
         self.model_name = model_name
-        
+
         if self.model_type == "gpt":
             from openai import OpenAI
+
             self.client = OpenAI(api_key=api_key) if api_key else OpenAI()
             self.pricing = {
                 "gpt-4o": {"input": 2.50, "output": 10.00},
-                "gpt-4o-mini": {"input": 0.15, "output": 0.60}, 
+                "gpt-4o-mini": {"input": 0.15, "output": 0.60},
                 "gpt-5-nano": {"input": 0.05, "output": 0.40},
             }
         elif self.model_type == "gemini":
             import google.generativeai as genai
+
             genai.configure(api_key=api_key)
             self.client = genai.GenerativeModel(model_name)
             self.pricing = {
@@ -90,7 +93,7 @@ class WordClassifier:
             }
         else:
             raise ValueError(f"Unsupported model type: {model_type}")
-    
+
     def _get_system_prompt(self) -> str:
         """Get the system prompt for word classification."""
         return """You are a Chinese language expert. For each Chinese word provided, give:
@@ -111,14 +114,14 @@ Examples:
 火车站 → {"definition": "train station", "classification": "compositional"}
 北京 → {"definition": "Beijing", "classification": "proper_name"}
 这个世界 → {"definition": "this century", "classification": "not_a_word"}"""
-    
+
     def classify_word(self, word: str) -> WordClassification:
         """
         Classify a single Chinese word.
-        
+
         Args:
             word: Chinese word to classify
-            
+
         Returns:
             WordClassification with definition and category
         """
@@ -130,7 +133,7 @@ Examples:
                         model=self.model_name,
                         messages=[
                             {"role": "system", "content": self._get_system_prompt()},
-                            {"role": "user", "content": word}
+                            {"role": "user", "content": word},
                         ],
                         max_completion_tokens=200,
                         response_format={
@@ -143,31 +146,33 @@ Examples:
                                     "properties": {
                                         "definition": {
                                             "type": "string",
-                                            "description": "Short English definition (1-5 words)"
+                                            "description": "Short English definition (1-5 words)",
                                         },
                                         "classification": {
                                             "type": "string",
                                             "enum": ["worth_learning", "compositional", "not_a_word", "proper_name"],
-                                            "description": "Word classification category"
-                                        }
+                                            "description": "Word classification category",
+                                        },
                                     },
                                     "required": ["definition", "classification"],
-                                    "additionalProperties": False
-                                }
-                            }
-                        }
+                                    "additionalProperties": False,
+                                },
+                            },
+                        },
                     )
                 except Exception as structured_error:
-                    logger.debug(f"Structured responses not supported for {self.model_name}, falling back to json_object: {structured_error}")
+                    logger.debug(
+                        f"Structured responses not supported for {self.model_name}, falling back to json_object: {structured_error}"
+                    )
                     # Fallback to simple json_object for models that don't support structured responses
                     response = self.client.chat.completions.create(
                         model=self.model_name,
                         messages=[
                             {"role": "system", "content": self._get_system_prompt()},
-                            {"role": "user", "content": word}
+                            {"role": "user", "content": word},
                         ],
                         max_completion_tokens=200,
-                        response_format={"type": "json_object"}
+                        response_format={"type": "json_object"},
                     )
                 content = response.choices[0].message.content.strip()
             else:  # gemini
@@ -177,54 +182,47 @@ Examples:
                     generation_config={
                         "temperature": 0.3,
                         "max_output_tokens": 100,
-                    }
+                    },
                 )
                 content = response.text.strip()
-            
+
             # Parse JSON response
             import json
+
             try:
                 result = json.loads(content)
                 return WordClassification(
                     word=word,
                     definition=result.get("definition", "unknown"),
-                    classification=result.get("classification", "worth_learning")
+                    classification=result.get("classification", "worth_learning"),
                 )
             except json.JSONDecodeError:
                 # Fallback if JSON parsing fails
                 logger.warning(f"Failed to parse JSON response for word '{word}': {content}")
-                return WordClassification(
-                    word=word,
-                    definition="unknown",
-                    classification="worth_learning"
-                )
-                
+                return WordClassification(word=word, definition="unknown", classification="worth_learning")
+
         except Exception as e:
             logger.error(f"Error classifying word '{word}': {e}")
-            return WordClassification(
-                word=word,
-                definition="error",
-                classification="worth_learning"
-            )
-    
+            return WordClassification(word=word, definition="error", classification="worth_learning")
+
     def classify_words_batch(self, words: List[str], max_workers: int = 3) -> List[WordClassification]:
         """
         Classify multiple words in parallel.
-        
+
         Args:
             words: List of Chinese words to classify
             max_workers: Maximum number of concurrent API calls
-            
+
         Returns:
             List of WordClassification results
         """
         from concurrent.futures import ThreadPoolExecutor, as_completed
-        
+
         results = []
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             # Submit all classification tasks
             future_to_word = {executor.submit(self.classify_word, word): word for word in words}
-            
+
             for future in as_completed(future_to_word):
                 try:
                     classification = future.result()
@@ -232,62 +230,60 @@ Examples:
                 except Exception as e:
                     word = future_to_word[future]
                     logger.error(f"Classification failed for word '{word}': {e}")
-                    results.append(WordClassification(
-                        word=word,
-                        definition="error",
-                        classification="worth_learning"
-                    ))
-        
+                    results.append(WordClassification(word=word, definition="error", classification="worth_learning"))
+
         # Sort results to match original word order
         word_to_result = {r.word: r for r in results}
         return [word_to_result[word] for word in words if word in word_to_result]
 
 
-def _weighted_random_selection(items: List[Tuple[str, int]], max_items: int, length_bonus: float = 0.3) -> List[Tuple[str, int]]:
+def _weighted_random_selection(
+    items: List[Tuple[str, int]], max_items: int, length_bonus: float = 0.3
+) -> List[Tuple[str, int]]:
     """
     Select items using weighted random selection based on frequency and length.
-    
+
     Args:
         items: List of (word, frequency) tuples
         max_items: Maximum number of items to select
         length_bonus: Bonus multiplier for longer words (e.g., 0.3 = 30% bonus per character)
-    
+
     Returns:
         List of selected (word, frequency) tuples
     """
     if not items or max_items <= 0:
         return []
-    
+
     if len(items) <= max_items:
         return items
-    
+
     # Calculate weights: frequency * (1 + length_bonus * length)
     weights = []
     for word, freq in items:
         length_multiplier = 1 + (length_bonus * len(word))
         weight = freq * length_multiplier
         weights.append(weight)
-    
+
     # Perform weighted random sampling without replacement
     selected = []
     available_items = list(items)
     available_weights = list(weights)
-    
+
     for _ in range(min(max_items, len(available_items))):
         # Use random.choices for weighted selection
         selected_item = random.choices(available_items, weights=available_weights, k=1)[0]
         selected_idx = available_items.index(selected_item)
-        
+
         # Add to results
         selected.append(selected_item)
-        
+
         # Remove from available items
         available_items.pop(selected_idx)
         available_weights.pop(selected_idx)
-        
+
         if not available_items:
             break
-    
+
     return selected
 
 
@@ -864,7 +860,7 @@ class ChineseEPUBAnalyzer:
             # Use weighted random selection instead of strict length-based sorting
             priority_word_pairs = [(word, freq) for word, freq, _, _ in priority_words]
             selected_pairs = _weighted_random_selection(priority_word_pairs, len(priority_words))
-            
+
             # Rebuild priority_words list with selected order
             word_to_data = {word: (word, freq, pinyin, hsk_level) for word, freq, pinyin, hsk_level in priority_words}
             priority_words = [word_to_data[word] for word, freq in selected_pairs]
@@ -894,7 +890,7 @@ class ChineseEPUBAnalyzer:
         # Use weighted random selection instead of strict length-based sorting
         word_items = list(unknown_words.items())
         selected_words = _weighted_random_selection(word_items, count)
-        
+
         return [
             (
                 word,
@@ -961,7 +957,7 @@ class ChineseEPUBAnalyzer:
             if unknown_at_level:
                 word_freq_pairs = [(word, freq) for word, freq, _ in unknown_at_level]
                 selected_pairs = _weighted_random_selection(word_freq_pairs, len(unknown_at_level))
-                
+
                 # Rebuild list with pinyin info preserved
                 word_to_data = {word: (word, freq, pinyin) for word, freq, pinyin in unknown_at_level}
                 unknown_at_level = [word_to_data[word] for word, freq in selected_pairs]

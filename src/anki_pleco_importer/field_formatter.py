@@ -12,14 +12,14 @@ from .llm import TokenUsage, FieldGenerator
 
 class FieldFormattingResult(BaseModel):
     """Result from field formatting operation."""
-    
+
     formatted_content: str
     token_usage: Optional[TokenUsage] = None
 
 
 class FieldFormatter(ABC):
     """Interface for AI-powered field formatting."""
-    
+
     @abstractmethod
     def format_field(self, hanzi: str, original_content: str) -> FieldFormattingResult:
         """Format a field using AI with the original content and hanzi as context."""
@@ -28,7 +28,7 @@ class FieldFormatter(ABC):
 
 class GptFieldFormatter(FieldFormatter):
     """Format fields using OpenAI GPT models."""
-    
+
     # GPT pricing per 1M tokens (same as main LLM module)
     PRICING = {
         "gpt-5": {"input": 1.25, "output": 10.00, "cached_input": 0.125},
@@ -53,14 +53,14 @@ class GptFieldFormatter(FieldFormatter):
         self.model = model
         self.temperature = temperature
         self.max_tokens = max_tokens
-        
+
         # Load formatting prompts for both single and multi-character
         self.single_char_prompt = ""
         self.multi_char_prompt = ""
-        
+
         if prompt_path:
             prompt_path_obj = Path(prompt_path)
-            
+
             # Load single character prompt (the default one)
             with open(prompt_path, "r", encoding="utf-8") as f:
                 self.single_char_prompt = f.read()
@@ -115,8 +115,9 @@ Output: Return only the formatted field content, no additional text."""
     def _is_single_character(self, chinese: str) -> bool:
         """Check if the Chinese text is a single character."""
         import re
+
         # Remove any non-Chinese characters and check if exactly one character remains
-        chinese_chars = re.findall(r'[\u4e00-\u9fff]', chinese)
+        chinese_chars = re.findall(r"[\u4e00-\u9fff]", chinese)
         return len(chinese_chars) == 1
 
     def format_field(self, hanzi: str, original_content: str) -> FieldFormattingResult:
@@ -124,28 +125,25 @@ Output: Return only the formatted field content, no additional text."""
         # Choose appropriate prompt based on character count
         is_single_char = self._is_single_character(hanzi)
         prompt_to_use = self.single_char_prompt if is_single_char else self.multi_char_prompt
-        
+
         # Create the user message
         user_message = f"Chinese word: {hanzi}\nOriginal content: {original_content}"
-        
+
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
-                messages=[
-                    {"role": "system", "content": prompt_to_use},
-                    {"role": "user", "content": user_message}
-                ],
+                messages=[{"role": "system", "content": prompt_to_use}, {"role": "user", "content": user_message}],
                 temperature=self.temperature,
                 max_tokens=self.max_tokens,
             )
-            
+
             # Extract the formatted content
             formatted_content = response.choices[0].message.content.strip()
-            
+
             # Calculate usage and cost
             usage_dict = response.usage.model_dump()
             cost = self._calculate_cost(usage_dict)
-            
+
             token_usage = TokenUsage(
                 prompt_tokens=usage_dict.get("prompt_tokens", 0),
                 completion_tokens=usage_dict.get("completion_tokens", 0),
@@ -157,7 +155,7 @@ Output: Return only the formatted field content, no additional text."""
                 formatted_content=formatted_content,
                 token_usage=token_usage,
             )
-            
+
         except Exception as e:
             # Return original content if formatting fails
             return FieldFormattingResult(
@@ -168,7 +166,7 @@ Output: Return only the formatted field content, no additional text."""
 
 class GeminiFieldFormatter(FieldFormatter):
     """Format fields using Google Gemini models."""
-    
+
     # Gemini pricing per 1M tokens
     PRICING = {
         "gemini-2.5-pro": {"input": 1.25, "output": 10.00, "cached_input": 0.3125},
@@ -192,14 +190,14 @@ class GeminiFieldFormatter(FieldFormatter):
         self.model = model
         self.temperature = temperature
         self.max_tokens = max_tokens
-        
+
         # Load formatting prompts for both single and multi-character
         self.single_char_prompt = ""
         self.multi_char_prompt = ""
-        
+
         if prompt_path:
             prompt_path_obj = Path(prompt_path)
-            
+
             # Load single character prompt (the default one)
             with open(prompt_path, "r", encoding="utf-8") as f:
                 self.single_char_prompt = f.read()
@@ -254,8 +252,9 @@ Output: Return only the formatted field content, no additional text."""
     def _is_single_character(self, chinese: str) -> bool:
         """Check if the Chinese text is a single character."""
         import re
+
         # Remove any non-Chinese characters and check if exactly one character remains
-        chinese_chars = re.findall(r'[\u4e00-\u9fff]', chinese)
+        chinese_chars = re.findall(r"[\u4e00-\u9fff]", chinese)
         return len(chinese_chars) == 1
 
     def format_field(self, hanzi: str, original_content: str) -> FieldFormattingResult:
@@ -263,22 +262,22 @@ Output: Return only the formatted field content, no additional text."""
         # Choose appropriate prompt based on character count
         is_single_char = self._is_single_character(hanzi)
         prompt_to_use = self.single_char_prompt if is_single_char else self.multi_char_prompt
-        
+
         # Create the user message
         user_message = f"{prompt_to_use}\n\nChinese word: {hanzi}\nOriginal content: {original_content}"
-        
+
         try:
             response = self.client.generate_content(
                 user_message,
                 generation_config={
                     "temperature": self.temperature,
                     "max_output_tokens": self.max_tokens,
-                }
+                },
             )
-            
+
             # Extract the formatted content
             formatted_content = response.text.strip()
-            
+
             # Calculate usage and cost
             usage_dict = {
                 "prompt_token_count": response.usage_metadata.prompt_token_count,
@@ -286,7 +285,7 @@ Output: Return only the formatted field content, no additional text."""
                 "total_token_count": response.usage_metadata.total_token_count,
             }
             cost = self._calculate_cost(usage_dict)
-            
+
             token_usage = TokenUsage(
                 prompt_tokens=usage_dict.get("prompt_token_count", 0),
                 completion_tokens=usage_dict.get("candidates_token_count", 0),
@@ -298,7 +297,7 @@ Output: Return only the formatted field content, no additional text."""
                 formatted_content=formatted_content,
                 token_usage=token_usage,
             )
-            
+
         except Exception as e:
             # Return original content if formatting fails
             return FieldFormattingResult(

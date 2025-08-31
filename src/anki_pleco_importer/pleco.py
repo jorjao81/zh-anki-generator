@@ -15,36 +15,38 @@ def format_html(html_content: str) -> str:
     """Format HTML content with proper indentation for structural elements while keeping inline elements inline."""
     if not html_content or not html_content.strip():
         return html_content
-    
+
     try:
-        soup = BeautifulSoup(html_content, 'html.parser')
-        
+        soup = BeautifulSoup(html_content, "html.parser")
+
         # Define inline elements that should stay inline
-        inline_tags = {'span', 'b', 'i', 'em', 'strong', 'a', 'code'}
-        
+        inline_tags = {"span", "b", "i", "em", "strong", "a", "code"}
+
         # Custom formatter that keeps inline elements inline
         def format_tag(tag, level=0):
             if tag.name is None:  # Text node
                 text = str(tag)
                 # Preserve whitespace for proper spacing around inline elements
                 return text
-            
-            indent = '  ' * level
-            
+
+            indent = "  " * level
+
             # Check if this tag should be inline
             if tag.name in inline_tags:
                 # Keep inline elements on same line
-                content = ''.join(format_tag(child, 0) for child in tag.children)
-                attrs = ' '.join(f'{k}="{v}"' if isinstance(v, str) else f'{k}="{" ".join(v)}"' 
-                               for k, v in tag.attrs.items())
-                attrs_str = f' {attrs}' if attrs else ''
-                return f'<{tag.name}{attrs_str}>{content}</{tag.name}>'
+                content = "".join(format_tag(child, 0) for child in tag.children)
+                attrs = " ".join(
+                    f'{k}="{v}"' if isinstance(v, str) else f'{k}="{" ".join(v)}"' for k, v in tag.attrs.items()
+                )
+                attrs_str = f" {attrs}" if attrs else ""
+                return f"<{tag.name}{attrs_str}>{content}</{tag.name}>"
             else:
                 # Structural elements get new lines and indentation
-                attrs = ' '.join(f'{k}="{v}"' if isinstance(v, str) else f'{k}="{" ".join(v)}"' 
-                               for k, v in tag.attrs.items())
-                attrs_str = f' {attrs}' if attrs else ''
-                
+                attrs = " ".join(
+                    f'{k}="{v}"' if isinstance(v, str) else f'{k}="{" ".join(v)}"' for k, v in tag.attrs.items()
+                )
+                attrs_str = f" {attrs}" if attrs else ""
+
                 if tag.children:
                     children_content = []
                     for child in tag.children:
@@ -56,17 +58,17 @@ def format_html(html_content: str) -> str:
                             else:
                                 # Block content - add with indentation
                                 children_content.append(f'\n{"  " * (level + 1)}{child_formatted}')
-                    
-                    content = ''.join(children_content)
+
+                    content = "".join(children_content)
                     if any(child.name not in inline_tags and child.name is not None for child in tag.children):
                         # Has block children, format with newlines
-                        return f'{indent}<{tag.name}{attrs_str}>{content}\n{indent}</{tag.name}>'
+                        return f"{indent}<{tag.name}{attrs_str}>{content}\n{indent}</{tag.name}>"
                     else:
                         # Only inline children or text, keep on same line
-                        return f'{indent}<{tag.name}{attrs_str}>{content}</{tag.name}>'
+                        return f"{indent}<{tag.name}{attrs_str}>{content}</{tag.name}>"
                 else:
-                    return f'{indent}<{tag.name}{attrs_str}></{tag.name}>'
-        
+                    return f"{indent}<{tag.name}{attrs_str}></{tag.name}>"
+
         # Format the soup
         if soup.contents:
             formatted_parts = []
@@ -75,12 +77,14 @@ def format_html(html_content: str) -> str:
                     formatted_parts.append(format_tag(element, 0))
                 elif str(element).strip():
                     formatted_parts.append(str(element).strip())
-            return '\n'.join(formatted_parts)
-        
+            return "\n".join(formatted_parts)
+
         return html_content
     except Exception:
         # If formatting fails, return the original content
         return html_content
+
+
 from .constants import (
     PARTS_OF_SPEECH,
     COMPILED_PATTERNS,
@@ -696,7 +700,9 @@ def extract_examples_from_text(text: str) -> Tuple[str, Optional[List[str]]]:
         if not examples:
             # Pattern 1: Chinese sentence/phrase followed by pinyin and English
             # This pattern should capture the full English translation
-            pattern1 = r"[一-龯][^.。;]*[.。]?\s+[A-Z][a-z]*(?:\s+[a-z]+)*[^.]*?[.!?]" r"(?:\s+[A-Z][^.]*?[.!?])*(?:\s|$)"
+            pattern1 = (
+                r"[一-龯][^.。;]*[.。]?\s+[A-Z][a-z]*(?:\s+[a-z]+)*[^.]*?[.!?]" r"(?:\s+[A-Z][^.]*?[.!?])*(?:\s|$)"
+            )
             matches1 = re.findall(pattern1, examples_part)
 
             if matches1:
@@ -846,11 +852,17 @@ def pleco_to_anki(
                 enhanced_similar_characters.append(char)
 
     if pregenerated_result:
-        structural_decomposition = format_html(pregenerated_result.structural_decomposition) if pregenerated_result.structural_decomposition else None
+        structural_decomposition = (
+            format_html(pregenerated_result.structural_decomposition)
+            if pregenerated_result.structural_decomposition
+            else None
+        )
         etymology = format_html(pregenerated_result.etymology) if pregenerated_result.etymology else None
     elif field_generator:
         generated = field_generator.generate(pleco_entry.chinese, pleco_entry.pinyin)
-        structural_decomposition = format_html(generated.structural_decomposition) if generated.structural_decomposition else None
+        structural_decomposition = (
+            format_html(generated.structural_decomposition) if generated.structural_decomposition else None
+        )
         etymology = format_html(generated.etymology) if generated.etymology else None
     else:
         structural_decomposition = get_structural_decomposition_semantic(pleco_entry.chinese, anki_dictionary)

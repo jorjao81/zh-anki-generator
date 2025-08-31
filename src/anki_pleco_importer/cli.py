@@ -44,30 +44,30 @@ def format_html(html_content: str) -> str:
     """Format HTML content with proper indentation for structural elements while keeping inline elements inline."""
     if not html_content or not html_content.strip():
         return html_content
-    
+
     try:
         from bs4.formatter import HTMLFormatter
-        
+
         class InlineFormatter(HTMLFormatter):
             """Custom formatter that keeps certain tags inline."""
-            
+
             def __init__(self):
                 super().__init__()
-                self.inline_tags = {'span', 'b', 'i', 'em', 'strong', 'a', 'code'}
-            
+                self.inline_tags = {"span", "b", "i", "em", "strong", "a", "code"}
+
             def indent(self, tag, level):
                 """Override indent to handle inline tags differently."""
                 if tag.name in self.inline_tags:
                     return 0  # No indentation for inline tags
                 return level
-        
-        soup = BeautifulSoup(html_content, 'html.parser')
-        
+
+        soup = BeautifulSoup(html_content, "html.parser")
+
         # Custom prettify with inline-aware formatting
         def prettify_with_inline_awareness(element, indent_level=0):
             result = []
             indent = "  " * indent_level
-            
+
             if element.name is None:  # Text node
                 text = str(element)
                 # Only strip if the text is purely whitespace, otherwise preserve spacing
@@ -76,53 +76,53 @@ def format_html(html_content: str) -> str:
                 elif text:  # Has whitespace - preserve it
                     return text
                 return ""
-            
+
             # Check if this is an inline element
-            inline_tags = {'span', 'b', 'i', 'em', 'strong', 'a', 'code'}
+            inline_tags = {"span", "b", "i", "em", "strong", "a", "code"}
             is_inline = element.name in inline_tags
-            
+
             # Format attributes
             attrs = []
             for key, value in element.attrs.items():
                 if isinstance(value, list):
-                    value = ' '.join(value)
+                    value = " ".join(value)
                 attrs.append(f'{key}="{value}"')
-            attrs_str = ' ' + ' '.join(attrs) if attrs else ''
-            
+            attrs_str = " " + " ".join(attrs) if attrs else ""
+
             # Handle children
             children = []
             for child in element.children:
                 child_result = prettify_with_inline_awareness(child, indent_level + (0 if is_inline else 1))
                 if child_result:
                     children.append(child_result)
-            
+
             if not children:
                 # Self-closing or empty tag
                 if is_inline:
                     return f"<{element.name}{attrs_str}></{element.name}>"
                 else:
                     return f"{indent}<{element.name}{attrs_str}></{element.name}>"
-            
+
             # Has children
             if is_inline:
                 # Inline elements: keep everything on same line
-                children_text = ''.join(children)
+                children_text = "".join(children)
                 return f"<{element.name}{attrs_str}>{children_text}</{element.name}>"
             else:
                 # Block elements: format with proper indentation
                 if all(child.name in inline_tags or child.name is None for child in element.children if child.name):
                     # All children are inline or text - keep on same line
-                    children_text = ''.join(children)
+                    children_text = "".join(children)
                     return f"{indent}<{element.name}{attrs_str}>{children_text}</{element.name}>"
                 else:
                     # Has block children - use newlines
-                    children_text = '\n'.join(f"{'  ' * (indent_level + 1)}{child}" for child in children if child)
+                    children_text = "\n".join(f"{'  ' * (indent_level + 1)}{child}" for child in children if child)
                     return f"{indent}<{element.name}{attrs_str}>\n{children_text}\n{indent}</{element.name}>"
-        
+
         # Process all root elements
         result_parts = []
         for element in soup.contents:
-            if hasattr(element, 'name'):
+            if hasattr(element, "name"):
                 formatted = prettify_with_inline_awareness(element, 0)
                 if formatted:
                     result_parts.append(formatted)
@@ -131,9 +131,9 @@ def format_html(html_content: str) -> str:
                 text = str(element).strip()
                 if text:
                     result_parts.append(text)
-        
-        return '\n'.join(result_parts)
-        
+
+        return "\n".join(result_parts)
+
     except Exception:
         # If formatting fails, return the original content
         return html_content
@@ -151,12 +151,12 @@ def format_html_for_terminal(text: str) -> str:
     def replace_red_span(match: re.Match[str]) -> str:
         content = match.group(1)
         return click.style(content, fg="red")
-    
+
     # Replace <span class="domain">...</span> with click's red formatting
     def replace_domain_span(match: re.Match[str]) -> str:
         content = match.group(1)
         return click.style(content, fg="red")
-    
+
     # Replace <span class="part-of-speech">...</span> with click's blue formatting
     def replace_pos_span(match: re.Match[str]) -> str:
         content = match.group(1)
@@ -175,7 +175,7 @@ def format_html_for_terminal(text: str) -> str:
         formatted,
         flags=re.IGNORECASE,
     )
-    
+
     # Handle domain class spans
     formatted = re.sub(
         r'<span\s+class="domain">(.*?)</span>',
@@ -183,7 +183,7 @@ def format_html_for_terminal(text: str) -> str:
         formatted,
         flags=re.IGNORECASE,
     )
-    
+
     # Handle part-of-speech class spans
     formatted = re.sub(
         r'<span\s+class="part-of-speech">(.*?)</span>',
@@ -255,71 +255,111 @@ def convert_html_to_terminal(html_content: str) -> str:
     """Convert HTML content to terminal-friendly formatting with colors and structure."""
     if not html_content:
         return ""
-    
+
     content = html_content.strip()
-    
+
     # Handle HTML entities
     content = content.replace("&nbsp;", " ")
     content = content.replace("&amp;", "&")
     content = content.replace("&lt;", "<")
     content = content.replace("&gt;", ">")
-    
+
     # Convert headers (p with b tags often act as headers)
-    content = re.sub(r'<p><b>(.*?)</b></p>', lambda m: click.style(m.group(1), bold=True, fg="blue") + "\n", content, flags=re.IGNORECASE)
-    content = re.sub(r'<p><b>(.*?)</b>', lambda m: click.style(m.group(1), bold=True, fg="blue"), content, flags=re.IGNORECASE)
-    
+    content = re.sub(
+        r"<p><b>(.*?)</b></p>",
+        lambda m: click.style(m.group(1), bold=True, fg="blue") + "\n",
+        content,
+        flags=re.IGNORECASE,
+    )
+    content = re.sub(
+        r"<p><b>(.*?)</b>", lambda m: click.style(m.group(1), bold=True, fg="blue"), content, flags=re.IGNORECASE
+    )
+
     # Convert bold text
-    content = re.sub(r'<b>(.*?)</b>', lambda m: click.style(m.group(1), bold=True), content, flags=re.IGNORECASE)
-    
-    # Convert italic text  
-    content = re.sub(r'<i>(.*?)</i>', lambda m: click.style(m.group(1), italic=True), content, flags=re.IGNORECASE)
-    
+    content = re.sub(r"<b>(.*?)</b>", lambda m: click.style(m.group(1), bold=True), content, flags=re.IGNORECASE)
+
+    # Convert italic text
+    content = re.sub(r"<i>(.*?)</i>", lambda m: click.style(m.group(1), italic=True), content, flags=re.IGNORECASE)
+
     # Handle Chinese characters in special spans (keep them visible but styled)
-    content = re.sub(r'<span class="hanzi">(.*?)</span>', lambda m: click.style(m.group(1), fg="cyan", bold=True), content, flags=re.IGNORECASE)
-    content = re.sub(r'<span class="pinyin">(.*?)</span>', lambda m: click.style(f"[{m.group(1)}]", fg="yellow"), content, flags=re.IGNORECASE)
+    content = re.sub(
+        r'<span class="hanzi">(.*?)</span>',
+        lambda m: click.style(m.group(1), fg="cyan", bold=True),
+        content,
+        flags=re.IGNORECASE,
+    )
+    content = re.sub(
+        r'<span class="pinyin">(.*?)</span>',
+        lambda m: click.style(f"[{m.group(1)}]", fg="yellow"),
+        content,
+        flags=re.IGNORECASE,
+    )
     content = re.sub(r'<span class="definition">(.*?)</span>', lambda m: m.group(1), content, flags=re.IGNORECASE)
     content = re.sub(r'<span class="translation">(.*?)</span>', lambda m: m.group(1), content, flags=re.IGNORECASE)
-    
+
     # Handle part-of-speech tags in meanings
-    content = re.sub(r'<span class="part-of-speech">(.*?)</span>', lambda m: click.style(m.group(1), fg="magenta", bold=True), content, flags=re.IGNORECASE)
-    
+    content = re.sub(
+        r'<span class="part-of-speech">(.*?)</span>',
+        lambda m: click.style(m.group(1), fg="magenta", bold=True),
+        content,
+        flags=re.IGNORECASE,
+    )
+
     # Handle domain tags in meanings
-    content = re.sub(r'<span class="domain">(.*?)</span>', lambda m: click.style(m.group(1), fg="red", bold=True), content, flags=re.IGNORECASE)
-    
+    content = re.sub(
+        r'<span class="domain">(.*?)</span>',
+        lambda m: click.style(m.group(1), fg="red", bold=True),
+        content,
+        flags=re.IGNORECASE,
+    )
+
     # Handle usage tags in meanings
-    content = re.sub(r'<span class="usage"[^>]*>(.*?)</span>', lambda m: click.style(m.group(1), fg="yellow"), content, flags=re.IGNORECASE)
-    
+    content = re.sub(
+        r'<span class="usage"[^>]*>(.*?)</span>',
+        lambda m: click.style(m.group(1), fg="yellow"),
+        content,
+        flags=re.IGNORECASE,
+    )
+
     # Handle any Chinese characters that might appear in examples (detect by Unicode range)
     def highlight_chinese_chars(text):
         # Match Chinese characters (CJK Unified Ideographs)
-        return re.sub(r'([\u4e00-\u9fff]+)', lambda m: click.style(m.group(1), fg="cyan", bold=True), text)
-    
+        return re.sub(r"([\u4e00-\u9fff]+)", lambda m: click.style(m.group(1), fg="cyan", bold=True), text)
+
     # Handle pinyin in examples (detect common pinyin patterns)
     def highlight_pinyin(text):
         # Match pinyin patterns (letters followed by tone numbers, or tone marks)
-        pinyin_pattern = r'\b([a-zA-ZüÜ]+[1-5]?(?:[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ])?)\b'
-        return re.sub(pinyin_pattern, lambda m: click.style(m.group(1), fg="yellow") if re.search(r'[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ1-5]', m.group(1)) else m.group(1), text)
-    
+        pinyin_pattern = r"\b([a-zA-ZüÜ]+[1-5]?(?:[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ])?)\b"
+        return re.sub(
+            pinyin_pattern,
+            lambda m: (
+                click.style(m.group(1), fg="yellow")
+                if re.search(r"[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ1-5]", m.group(1))
+                else m.group(1)
+            ),
+            text,
+        )
+
     # Apply Chinese character highlighting to the entire content
     content = highlight_chinese_chars(content)
-    
+
     # Apply pinyin highlighting
     content = highlight_pinyin(content)
-    
+
     # Convert unordered lists
     def convert_ul(match):
         ul_content = match.group(1)
         # Capture both li tags and their content
-        li_matches = re.finditer(r'<li([^>]*)>(.*?)</li>', ul_content, re.DOTALL | re.IGNORECASE)
+        li_matches = re.finditer(r"<li([^>]*)>(.*?)</li>", ul_content, re.DOTALL | re.IGNORECASE)
         formatted_items = []
-        
+
         for li_match in li_matches:
             li_attributes = li_match.group(1)  # The attributes part
             item_content = li_match.group(2)  # The content part
-            
+
             # Clean up the item content
             clean_item = convert_html_to_terminal(item_content.strip())
-            
+
             # Determine list marker based on class attribute
             if 'class="semantic"' in li_attributes:
                 marker = "🧠"  # Brain for semantic
@@ -328,28 +368,38 @@ def convert_html_to_terminal(html_content: str) -> str:
             elif 'class="example"' in li_attributes:
                 marker = "📝"  # Memo for examples
             else:
-                marker = "•"   # Default bullet
-            
+                marker = "•"  # Default bullet
+
             formatted_items.append(f"  {marker} {clean_item}")
-        
+
         return "\n" + "\n".join(formatted_items) + "\n"
-    
-    content = re.sub(r'<ul[^>]*>(.*?)</ul>', convert_ul, content, flags=re.DOTALL | re.IGNORECASE)
-    
+
+    content = re.sub(r"<ul[^>]*>(.*?)</ul>", convert_ul, content, flags=re.DOTALL | re.IGNORECASE)
+
     # Convert list items that aren't in UL (standalone)
-    content = re.sub(r'<li[^>]*>(.*?)</li>', lambda m: f"  • {convert_html_to_terminal(m.group(1).strip())}", content, flags=re.DOTALL | re.IGNORECASE)
-    
+    content = re.sub(
+        r"<li[^>]*>(.*?)</li>",
+        lambda m: f"  • {convert_html_to_terminal(m.group(1).strip())}",
+        content,
+        flags=re.DOTALL | re.IGNORECASE,
+    )
+
     # Convert paragraphs
-    content = re.sub(r'<p[^>]*>(.*?)</p>', lambda m: f"{convert_html_to_terminal(m.group(1).strip())}\n", content, flags=re.DOTALL | re.IGNORECASE)
-    
+    content = re.sub(
+        r"<p[^>]*>(.*?)</p>",
+        lambda m: f"{convert_html_to_terminal(m.group(1).strip())}\n",
+        content,
+        flags=re.DOTALL | re.IGNORECASE,
+    )
+
     # Clean up any remaining HTML tags
-    content = re.sub(r'<[^>]+>', '', content)
-    
+    content = re.sub(r"<[^>]+>", "", content)
+
     # Clean up extra whitespace and newlines
-    content = re.sub(r'\n\s*\n', '\n\n', content)  # Multiple newlines to double
-    content = re.sub(r'\n{3,}', '\n\n', content)   # Triple+ newlines to double
+    content = re.sub(r"\n\s*\n", "\n\n", content)  # Multiple newlines to double
+    content = re.sub(r"\n{3,}", "\n\n", content)  # Triple+ newlines to double
     content = content.strip()
-    
+
     return content
 
 
@@ -424,10 +474,7 @@ def load_audio_config(config_file: Optional[str] = None, verbose: bool = False) 
     env_config = {
         "forvo": {"api_key": os.getenv("FORVO_API_KEY")},
         "qwen": {"api_key": os.getenv("DASHSCOPE_API_KEY")},
-        "tencent": {
-            "secret_id": os.getenv("TENCENT_SECRET_ID"),
-            "secret_key": os.getenv("TENCENT_API_KEY")
-        },
+        "tencent": {"secret_id": os.getenv("TENCENT_SECRET_ID"), "secret_key": os.getenv("TENCENT_API_KEY")},
     }
 
     # Merge environment config with file config
@@ -441,7 +488,9 @@ def load_audio_config(config_file: Optional[str] = None, verbose: bool = False) 
         if composite_provider in config:
             for provider, provider_config in env_config.items():
                 if provider in config[composite_provider]:
-                    config[composite_provider][provider].update({k: v for k, v in provider_config.items() if v is not None})
+                    config[composite_provider][provider].update(
+                        {k: v for k, v in provider_config.items() if v is not None}
+                    )
 
     return config
 
@@ -487,8 +536,14 @@ def cli() -> None:
     type=click.Path(),
     help="Directory to copy selected audio files to",
 )
-@click.option("--ai-config", type=click.Path(exists=True), help="Path to AI configuration YAML file (default: ai_config/ai_config.yaml)")
-@click.option("--use-ai-fields", is_flag=True, help="Enable AI-powered field generation (etymology and structural decomposition)")
+@click.option(
+    "--ai-config",
+    type=click.Path(exists=True),
+    help="Path to AI configuration YAML file (default: ai_config/ai_config.yaml)",
+)
+@click.option(
+    "--use-ai-fields", is_flag=True, help="Enable AI-powered field generation (etymology and structural decomposition)"
+)
 @click.option("--use-ai-formatting", is_flag=True, help="Enable AI-powered field formatting (meaning and examples)")
 @click.option("--dry-run", is_flag=True, help="Show what would be done without making changes")
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
@@ -508,7 +563,7 @@ def convert(
     html_output: bool,
 ) -> None:
     """Convert Pleco flashcard exports to Anki-compatible format."""
-    
+
     # No need for mutually exclusive checks with unified AI config
 
     # Configure logging level
@@ -599,7 +654,7 @@ def convert(
 
             anki_cards = []
             cards = []
-            
+
             # Try to parse Chinese.txt if it exists, but don't fail if it doesn't
             chinese_file = Path("Chinese.txt")
             if chinese_file.exists():
@@ -617,44 +672,43 @@ def convert(
 
             # Initialize AI configuration loader
             config_loader = AIConfigLoader(ai_config) if ai_config else AIConfigLoader()
-            
+
             # Initialize AI components
             field_generator = None
             meaning_formatter = None
             examples_formatter = None
-            
+
             # Track AI usage statistics
             total_tokens = 0
             total_cost = 0.0
             ai_calls = 0
-            
+
             if use_ai_fields:
                 field_generator = create_field_generator(config_loader)
                 if verbose:
                     click.echo("Field generator initialized from AI config")
-                    
+
             if use_ai_formatting:
                 meaning_formatter = create_meaning_formatter(config_loader)
                 examples_formatter = create_examples_formatter(config_loader)
                 if verbose:
                     click.echo("Field formatters initialized from AI config")
 
-
             # Generate AI fields in parallel if enabled
             field_results = {}
             if field_generator:
                 if verbose:
                     click.echo(f"Generating AI fields for {len(collection)} entries...")
-                
+
                 field_results = field_generator.generate_fields(collection)
-                    
+
                 # Track usage statistics from field results
                 for field_result in field_results.values():
-                    if hasattr(field_result, 'token_usage') and field_result.token_usage:
+                    if hasattr(field_result, "token_usage") and field_result.token_usage:
                         total_tokens += field_result.token_usage.total_tokens
                         total_cost += field_result.token_usage.cost_usd
                         ai_calls += 1
-                
+
                 if verbose:
                     click.echo(f"AI field generation completed.")
 
@@ -662,7 +716,8 @@ def convert(
             def is_single_character(chinese: str) -> bool:
                 """Check if the Chinese text is a single character."""
                 import re
-                chinese_chars = re.findall(r'[\u4e00-\u9fff]', chinese)
+
+                chinese_chars = re.findall(r"[\u4e00-\u9fff]", chinese)
                 return len(chinese_chars) == 1
 
             for i, entry in enumerate(collection, 1):
@@ -673,15 +728,15 @@ def convert(
 
                 # Apply field formatting if requested
                 # Skip meaning formatting for single-character words
-                
+
                 if meaning_formatter and anki_card.meaning and not is_single_character(anki_card.simplified):
                     try:
                         if verbose:
                             click.echo(f"    Formatting meaning field for '{anki_card.simplified}'...")
                         format_result = meaning_formatter.format_field(anki_card.simplified, anki_card.meaning)
                         anki_card.meaning = format_result.formatted_content
-                        
-                        # Track usage statistics  
+
+                        # Track usage statistics
                         if format_result.token_usage:
                             total_tokens += format_result.token_usage.total_tokens
                             total_cost += format_result.token_usage.cost_usd
@@ -695,13 +750,17 @@ def convert(
                 elif meaning_formatter and anki_card.meaning and is_single_character(anki_card.simplified) and verbose:
                     click.echo(f"    Skipping meaning formatting for single character '{anki_card.simplified}'")
 
+                # Initialize formatted examples field
+                formatted_examples = None
                 if examples_formatter and anki_card.examples:
                     try:
                         if verbose:
                             click.echo(f"    Formatting examples field for '{anki_card.simplified}'...")
                         format_result = examples_formatter.format_field(anki_card.simplified, anki_card.examples)
-                        anki_card.examples = format_result.formatted_content
-                        
+                        formatted_examples = format_result.formatted_content
+                        # Store formatted examples on the card object for later use
+                        anki_card._formatted_examples = formatted_examples
+
                         # Track usage statistics
                         if format_result.token_usage:
                             total_tokens += format_result.token_usage.total_tokens
@@ -771,8 +830,12 @@ def convert(
 
                 if anki_card.examples:
                     click.echo(f"    {click.style('Examples:', fg='green', bold=True)}")
-                    # Use the semantic markup function to get HTML version like the export does
-                    examples_html = format_examples_with_semantic_markup(anki_card.examples)
+                    # Use formatted examples if available from AI formatting, otherwise use default formatting
+                    if hasattr(anki_card, '_formatted_examples') and anki_card._formatted_examples:
+                        examples_html = anki_card._formatted_examples
+                    else:
+                        # Use the semantic markup function to get HTML version like the export does
+                        examples_html = format_examples_with_semantic_markup(anki_card.examples)
                     if examples_html:
                         if html_output:
                             # For HTML output, display formatted HTML
@@ -817,14 +880,21 @@ def convert(
             if not dry_run:
                 # Convert to DataFrame and save as CSV
                 df_data = []
-                for card in anki_cards:
+                for i, card in enumerate(anki_cards):
+                    # Use formatted examples if available (from AI formatting)
+                    examples_content = None
+                    if hasattr(card, '_formatted_examples') and card._formatted_examples:
+                        examples_content = card._formatted_examples
+                    else:
+                        examples_content = format_examples_with_semantic_markup(card.examples)
+                    
                     df_data.append(
                         {
                             "simplified": card.simplified,
                             "pinyin": card.pinyin,
                             "pronunciation": card.pronunciation,
                             "meaning": convert_to_html_format(card.meaning),
-                            "examples": format_examples_with_semantic_markup(card.examples),
+                            "examples": examples_content,
                             "phonetic_component": card.phonetic_component,
                             "structural_decomposition": card.structural_decomposition,
                             "etymology": card.etymology,
@@ -859,14 +929,14 @@ def convert(
                         )
                     )
 
-                # Display AI usage summary 
+                # Display AI usage summary
                 if (use_ai_fields or use_ai_formatting) and ai_calls > 0:
                     services_used = []
                     if use_ai_fields:
                         services_used.append("field generation")
                     if use_ai_formatting:
                         services_used.append("field formatting")
-                    
+
                     services_str = ", ".join(services_used)
                     click.echo(
                         click.style(
@@ -922,7 +992,7 @@ def convert(
                         services_used.append("field generation")
                     if use_ai_formatting:
                         services_used.append("field formatting")
-                    
+
                     services_str = ", ".join(services_used)
                     click.echo(
                         click.style(
@@ -1038,9 +1108,7 @@ def summary(anki_file: Path, top_candidates: int, verbose: bool) -> None:
                     percentage_color = (
                         "green"
                         if analysis.coverage_percentage >= 80
-                        else "yellow"
-                        if analysis.coverage_percentage >= 50
-                        else "red"
+                        else "yellow" if analysis.coverage_percentage >= 50 else "red"
                     )
 
                     click.echo(
@@ -1058,9 +1126,7 @@ def summary(anki_file: Path, top_candidates: int, verbose: bool) -> None:
                         percentage_color = (
                             "green"
                             if cumulative.coverage_percentage >= 80
-                            else "yellow"
-                            if cumulative.coverage_percentage >= 50
-                            else "red"
+                            else "yellow" if cumulative.coverage_percentage >= 50 else "red"
                         )
 
                         click.echo(
@@ -1238,9 +1304,7 @@ def missing_hsk(anki_file: Path, count: int, max_level: int, verbose: bool) -> N
             coverage_color = (
                 "green"
                 if analysis.coverage_percentage >= 90
-                else "yellow"
-                if analysis.coverage_percentage >= 70
-                else "red"
+                else "yellow" if analysis.coverage_percentage >= 70 else "red"
             )
 
             click.echo(
@@ -1495,23 +1559,25 @@ def analyze_epub(
         # Interactive learning workflow if enabled
         if interactive_learning and analysis.word_classifications:
             click.echo(f"\n🎓 Starting interactive learning session...")
-            
+
             # Initialize interactive learner
             learner = create_interactive_learner(
                 names_file=proper_names_file or Path("names.txt"),
-                known_words_file=known_words_file or Path("known_words.txt")
+                known_words_file=known_words_file or Path("known_words.txt"),
             )
-            
+
             # Process classified words interactively
             session = learner.process_classified_words(analysis.word_classifications)
-            
+
             # Save results
             learner.save_session(session)
-            
+
             # Update analysis with processed words for final report
             if session.known_words:
-                click.echo(f"\nℹ️  Note: {len(session.known_words)} words marked as known will be filtered from future analyses")
-        
+                click.echo(
+                    f"\nℹ️  Note: {len(session.known_words)} words marked as known will be filtered from future analyses"
+                )
+
         # Generate comprehensive report
         _generate_epub_analysis_report(analysis, verbose, list(target_coverage), top_unknown)
 
@@ -1524,7 +1590,9 @@ def analyze_epub(
         raise click.Abort()
 
 
-def _generate_epub_analysis_report(analysis: BookAnalysis, verbose: bool, target_coverages: List[int], top_unknown: int = 50) -> None:
+def _generate_epub_analysis_report(
+    analysis: BookAnalysis, verbose: bool, target_coverages: List[int], top_unknown: int = 50
+) -> None:
     """Generate and display comprehensive EPUB analysis report."""
 
     # Header
@@ -1606,67 +1674,75 @@ def _generate_epub_analysis_report(analysis: BookAnalysis, verbose: bool, target
     if analysis.high_frequency_unknown:
         # Calculate how many words to display
         display_count = min(top_unknown, len(analysis.high_frequency_unknown))
-        
+
         click.echo(f"\n{click.style('🔥 High-Frequency Unknown Words', fg='red', bold=True)}")
         click.echo(f"(Top {display_count} of {len(analysis.high_frequency_unknown)} most frequent unknown words)")
         click.echo("-" * 80)
 
         # Display words in a clean table format (show top N as requested)
         word_data = analysis.high_frequency_unknown[:display_count]
-        
+
         # Set up table headers based on whether we have classifications
         if analysis.word_classifications:
             # Create a mapping from word to classification
             word_to_classification = {c.word: c for c in analysis.word_classifications}
-            
+
             # Group words by classification
             from collections import defaultdict
+
             grouped_words = defaultdict(list)
-            
+
             for word, freq, pinyin, hsk_level in word_data:
                 classification = word_to_classification.get(word)
                 if classification:
                     grouped_words[classification.classification].append((word, freq, pinyin, hsk_level, classification))
                 else:
                     grouped_words["unknown"].append((word, freq, pinyin, hsk_level, None))
-            
+
             # Show legend for classifications
-            click.echo("Legend: " + click.style("worth", fg="green") + " = worth learning, " +
-                      click.style("composite", fg="yellow") + " = compositional, " +
-                      click.style("name", fg="cyan") + " = proper name, " +
-                      click.style("invalid", fg="red") + " = not a word")
+            click.echo(
+                "Legend: "
+                + click.style("worth", fg="green")
+                + " = worth learning, "
+                + click.style("composite", fg="yellow")
+                + " = compositional, "
+                + click.style("name", fg="cyan")
+                + " = proper name, "
+                + click.style("invalid", fg="red")
+                + " = not a word"
+            )
             click.echo("-" * 90)
-            
+
             # Display groups in order of priority
             classification_order = ["worth_learning", "compositional", "proper_name", "not_a_word", "unknown"]
             classification_names = {
                 "worth_learning": "🟢 Worth Learning",
-                "compositional": "🟡 Compositional", 
+                "compositional": "🟡 Compositional",
                 "proper_name": "🔵 Proper Names",
                 "not_a_word": "🔴 Invalid/Not Words",
-                "unknown": "⚪ Unclassified"
+                "unknown": "⚪ Unclassified",
             }
-            
+
             total_shown = 0
             for classification_type in classification_order:
                 if classification_type not in grouped_words or not grouped_words[classification_type]:
                     continue
-                
+
                 group_words = grouped_words[classification_type]
                 group_count = len(group_words)
-                
+
                 # Calculate how many to show from this group (proportional to remaining space)
                 remaining_space = display_count - total_shown
                 if remaining_space <= 0:
                     break
-                    
+
                 words_to_show = min(group_count, remaining_space)
-                
+
                 # Show group header
                 click.echo(f"\n{classification_names[classification_type]} ({words_to_show} of {group_count})")
                 click.echo(f"{'Word':>6} {'Pinyin':<12} {'Freq':>6} {'HSK':>8} {'Definition':<20}")
                 click.echo("-" * 65)
-                
+
                 # Show words from this group
                 for i, (word, freq, pinyin, hsk_level, classification) in enumerate(group_words[:words_to_show]):
                     hsk_text = f"HSK {hsk_level}" if hsk_level else "non-HSK"
@@ -1676,18 +1752,20 @@ def _generate_epub_analysis_report(analysis: BookAnalysis, verbose: bool, target
                         hsk_color = "yellow"
                     else:
                         hsk_color = "red"
-                    
+
                     definition = ""
                     if classification:
-                        definition = classification.definition[:18] + ("..." if len(classification.definition) > 18 else "")
-                    
+                        definition = classification.definition[:18] + (
+                            "..." if len(classification.definition) > 18 else ""
+                        )
+
                     # Format each column separately to maintain alignment
                     colored_hsk = click.style(f"{hsk_text:>8}", fg=hsk_color)
-                    
+
                     click.echo(f"{word:>6} {pinyin:<12} {freq:>6,} {colored_hsk} {definition:<20}")
-                
+
                 total_shown += words_to_show
-                
+
                 # Show truncation message if there are more words in this group
                 if group_count > words_to_show:
                     remaining_in_group = group_count - words_to_show
@@ -1696,7 +1774,7 @@ def _generate_epub_analysis_report(analysis: BookAnalysis, verbose: bool, target
             # Original table headers and display without classifications
             click.echo(f"{'Word':>6} {'Pinyin':<15} {'Freq':>6} {'HSK Level':<10}")
             click.echo("-" * 80)
-            
+
             for word, freq, pinyin, hsk_level in word_data:
                 hsk_text = f"HSK {hsk_level}" if hsk_level else "non-HSK"
                 if hsk_level and hsk_level <= 4:
@@ -1705,7 +1783,7 @@ def _generate_epub_analysis_report(analysis: BookAnalysis, verbose: bool, target
                     hsk_color = "yellow"
                 else:
                     hsk_color = "red"
-                    
+
                 # Format with proper alignment by applying color to pre-sized text
                 colored_hsk = click.style(f"{hsk_text:<10}", fg=hsk_color)
                 click.echo(f"{word:>6} {pinyin:<15} {freq:>6,} {colored_hsk}")
@@ -1719,7 +1797,9 @@ def _generate_epub_analysis_report(analysis: BookAnalysis, verbose: bool, target
             total_available = len(analysis.high_frequency_unknown)
             if total_available > display_count:
                 remaining = total_available - display_count
-                click.echo(f"\n📊 Showing {display_count} of {total_available} total words (increase --top-unknown to see more)")
+                click.echo(
+                    f"\n📊 Showing {display_count} of {total_available} total words (increase --top-unknown to see more)"
+                )
             else:
                 click.echo(f"\n📊 Showing all {total_available} classified words")
 

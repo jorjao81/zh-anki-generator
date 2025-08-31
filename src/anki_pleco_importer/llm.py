@@ -62,14 +62,14 @@ class GptFieldGenerator(FieldGenerator):
         self.reasoning_effort = reasoning_effort
         self.temperature = temperature
         self.use_web_search = use_web_search
-        
+
         # Load both single and multi-character prompts
         self.single_char_prompt = ""
         self.multi_char_prompt = ""
-        
+
         if prompt_path:
             prompt_path_obj = Path(prompt_path)
-            
+
             # Load single character prompt (the default one)
             with open(prompt_path, "r", encoding="utf-8") as f:
                 self.single_char_prompt = f.read()
@@ -86,13 +86,13 @@ class GptFieldGenerator(FieldGenerator):
             # Load examples from the appropriate examples directories
             single_examples_dir = prompt_path_obj.parent / "examples_single_char"
             multi_examples_dir = prompt_path_obj.parent / "examples_multi_char"
-            
+
             if single_examples_dir.exists():
                 self.single_char_prompt = self._load_prompt_with_examples(self.single_char_prompt, single_examples_dir)
-            
+
             if multi_examples_dir.exists():
                 self.multi_char_prompt = self._load_prompt_with_examples(self.multi_char_prompt, multi_examples_dir)
-            
+
             # Fallback to shared examples directory if separate ones don't exist
             shared_examples_dir = prompt_path_obj.parent / "examples"
             if shared_examples_dir.exists() and not single_examples_dir.exists() and not multi_examples_dir.exists():
@@ -105,7 +105,7 @@ class GptFieldGenerator(FieldGenerator):
         import os
 
         examples_text = "\n\nHere are examples of the expected output format:\n\n"
-        
+
         # Determine if this is for single or multi-character examples
         is_single_char = "single_char" in str(examples_dir)
         is_multi_char = "multi_char" in str(examples_dir)
@@ -113,7 +113,7 @@ class GptFieldGenerator(FieldGenerator):
         # Load all structural decomposition examples
         structural_files = glob.glob(str(examples_dir / "structural_decomposition*.html"))
         structural_files.sort()  # Ensure consistent ordering
-        
+
         for i, structural_path in enumerate(structural_files, 1):
             if os.path.getsize(structural_path) > 0:  # Skip empty files
                 with open(structural_path, "r", encoding="utf-8") as f:
@@ -130,7 +130,7 @@ class GptFieldGenerator(FieldGenerator):
         # Load all etymology examples
         etymology_files = glob.glob(str(examples_dir / "etymology*.html"))
         etymology_files.sort()  # Ensure consistent ordering
-        
+
         for i, etymology_path in enumerate(etymology_files, 1):
             if os.path.getsize(etymology_path) > 0:  # Skip empty files
                 with open(etymology_path, "r", encoding="utf-8") as f:
@@ -142,7 +142,9 @@ class GptFieldGenerator(FieldGenerator):
                         example_name = "学校" if i == 1 else f"multi char example {i}"
                     else:
                         example_name = "忆" if i == 1 else f"example {i}"  # fallback for shared examples
-                    examples_text += f"**Example etymology_html for {example_name}:**\n```html\n{etymology_content}\n```\n\n"
+                    examples_text += (
+                        f"**Example etymology_html for {example_name}:**\n```html\n{etymology_content}\n```\n\n"
+                    )
 
         examples_text += "Please follow these formats exactly, using the same HTML structure and CSS classes.\n"
 
@@ -167,8 +169,9 @@ class GptFieldGenerator(FieldGenerator):
     def _is_single_character(self, chinese: str) -> bool:
         """Check if the Chinese text is a single character."""
         import re
+
         # Remove any non-Chinese characters and check if exactly one character remains
-        chinese_chars = re.findall(r'[\u4e00-\u9fff]', chinese)
+        chinese_chars = re.findall(r"[\u4e00-\u9fff]", chinese)
         return len(chinese_chars) == 1
 
     def generate(self, chinese: str, pinyin: str) -> FieldGenerationResult:
@@ -177,7 +180,7 @@ class GptFieldGenerator(FieldGenerator):
         # Choose appropriate prompt based on character count
         is_single_char = self._is_single_character(chinese)
         prompt_to_use = self.single_char_prompt if is_single_char else self.multi_char_prompt
-        
+
         # Create input messages for Responses API
         input_messages = [
             {"role": "system", "content": prompt_to_use},
@@ -186,15 +189,15 @@ class GptFieldGenerator(FieldGenerator):
                 "content": json.dumps({"character": chinese, "pinyin": pinyin}, ensure_ascii=False),
             },
         ]
-        
+
         kwargs: Dict[str, Any] = {
             "model": self.model,
             "input": input_messages,
         }
-        
+
         if self.temperature is not None:
             kwargs["temperature"] = self.temperature
-            
+
         # Add web search tool if requested
         if self.use_web_search:
             kwargs["tools"] = [{"type": "web_search_preview"}]
@@ -243,21 +246,22 @@ class GeminiFieldGenerator(FieldGenerator):
         temperature: Optional[float] = None,
     ) -> None:
         import google.generativeai as genai
-        
+
         if api_key:
             genai.configure(api_key=api_key)
-        
+
         self.model = model
         self.temperature = temperature
-        
+
         # Load both single and multi-character prompts
         self.single_char_prompt = ""
         self.multi_char_prompt = ""
-        
+
         if prompt_path:
             from pathlib import Path
+
             prompt_path_obj = Path(prompt_path)
-            
+
             # Load single character prompt (the default one)
             with open(prompt_path, "r", encoding="utf-8") as f:
                 self.single_char_prompt = f.read()
@@ -274,13 +278,13 @@ class GeminiFieldGenerator(FieldGenerator):
             # Load examples from the appropriate examples directories
             single_examples_dir = prompt_path_obj.parent / "examples_single_char"
             multi_examples_dir = prompt_path_obj.parent / "examples_multi_char"
-            
+
             if single_examples_dir.exists():
                 self.single_char_prompt = self._load_prompt_with_examples(self.single_char_prompt, single_examples_dir)
-            
+
             if multi_examples_dir.exists():
                 self.multi_char_prompt = self._load_prompt_with_examples(self.multi_char_prompt, multi_examples_dir)
-            
+
             # Fallback to shared examples directory if separate ones don't exist
             shared_examples_dir = prompt_path_obj.parent / "examples"
             if shared_examples_dir.exists() and not single_examples_dir.exists() and not multi_examples_dir.exists():
@@ -296,7 +300,7 @@ class GeminiFieldGenerator(FieldGenerator):
         import os
 
         examples_text = "\n\nHere are examples of the expected output format:\n\n"
-        
+
         # Determine if this is for single or multi-character examples
         is_single_char = "single_char" in str(examples_dir)
         is_multi_char = "multi_char" in str(examples_dir)
@@ -304,7 +308,7 @@ class GeminiFieldGenerator(FieldGenerator):
         # Load all structural decomposition examples
         structural_files = glob.glob(str(examples_dir / "structural_decomposition*.html"))
         structural_files.sort()  # Ensure consistent ordering
-        
+
         for i, structural_path in enumerate(structural_files, 1):
             if os.path.getsize(structural_path) > 0:  # Skip empty files
                 with open(structural_path, "r", encoding="utf-8") as f:
@@ -321,7 +325,7 @@ class GeminiFieldGenerator(FieldGenerator):
         # Load all etymology examples
         etymology_files = glob.glob(str(examples_dir / "etymology*.html"))
         etymology_files.sort()  # Ensure consistent ordering
-        
+
         for i, etymology_path in enumerate(etymology_files, 1):
             if os.path.getsize(etymology_path) > 0:  # Skip empty files
                 with open(etymology_path, "r", encoding="utf-8") as f:
@@ -333,7 +337,9 @@ class GeminiFieldGenerator(FieldGenerator):
                         example_name = "学校" if i == 1 else f"multi char example {i}"
                     else:
                         example_name = "忆" if i == 1 else f"example {i}"  # fallback for shared examples
-                    examples_text += f"**Example etymology_html for {example_name}:**\n```html\n{etymology_content}\n```\n\n"
+                    examples_text += (
+                        f"**Example etymology_html for {example_name}:**\n```html\n{etymology_content}\n```\n\n"
+                    )
 
         examples_text += "Please follow these formats exactly, using the same HTML structure and CSS classes.\n"
 
@@ -358,8 +364,9 @@ class GeminiFieldGenerator(FieldGenerator):
     def _is_single_character(self, chinese: str) -> bool:
         """Check if the Chinese text is a single character."""
         import re
+
         # Remove any non-Chinese characters and check if exactly one character remains
-        chinese_chars = re.findall(r'[\u4e00-\u9fff]', chinese)
+        chinese_chars = re.findall(r"[\u4e00-\u9fff]", chinese)
         return len(chinese_chars) == 1
 
     def generate(self, chinese: str, pinyin: str) -> FieldGenerationResult:
@@ -377,28 +384,25 @@ class GeminiFieldGenerator(FieldGenerator):
         generation_config = {}
         if self.temperature is not None:
             generation_config["temperature"] = self.temperature
-        
+
         # Set response format to JSON
         generation_config["response_mime_type"] = "application/json"
 
         try:
-            response = self.genai_model.generate_content(
-                full_prompt,
-                generation_config=generation_config
-            )
-            
+            response = self.genai_model.generate_content(full_prompt, generation_config=generation_config)
+
             content = response.text
             data = json.loads(content)
 
             # Extract token usage and calculate cost
             usage_dict = {}
-            if hasattr(response, 'usage_metadata') and response.usage_metadata:
+            if hasattr(response, "usage_metadata") and response.usage_metadata:
                 usage_dict = {
                     "prompt_token_count": response.usage_metadata.prompt_token_count,
                     "candidates_token_count": response.usage_metadata.candidates_token_count,
                     "total_token_count": response.usage_metadata.total_token_count,
                 }
-            
+
             cost = self._calculate_cost(usage_dict)
 
             token_usage = TokenUsage(
@@ -416,6 +420,4 @@ class GeminiFieldGenerator(FieldGenerator):
 
         except Exception as e:
             # Return empty result with error info in case of failure
-            return FieldGenerationResult(
-                token_usage=TokenUsage(cost_usd=0.0)
-            )
+            return FieldGenerationResult(token_usage=TokenUsage(cost_usd=0.0))

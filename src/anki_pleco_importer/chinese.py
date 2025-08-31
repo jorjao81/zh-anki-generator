@@ -16,7 +16,9 @@ def convert_numbered_pinyin_to_tones(pinyin: str) -> str:
     """Convert numbered pinyin (e.g., 'ni3hao3') to pinyin with tone marks (e.g., 'nǐhǎo')."""
     # Handle non-string input gracefully
     if not isinstance(pinyin, str):
-        if pinyin is None or (isinstance(pinyin, float) and (pinyin != pinyin or pinyin == float('inf') or pinyin == float('-inf'))):  # NaN or inf
+        if pinyin is None or (
+            isinstance(pinyin, float) and (pinyin != pinyin or pinyin == float("inf") or pinyin == float("-inf"))
+        ):  # NaN or inf
             return ""
         return str(pinyin)
     # Tone mark mappings for each vowel
