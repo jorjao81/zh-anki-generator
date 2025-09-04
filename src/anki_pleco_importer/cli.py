@@ -734,7 +734,8 @@ def convert(
                         if verbose:
                             click.echo(f"    Formatting meaning field for '{anki_card.simplified}'...")
                         format_result = meaning_formatter.format_field(anki_card.simplified, anki_card.meaning)
-                        anki_card.meaning = format_result.formatted_content
+                        # Store formatted meaning on the card object for later use
+                        anki_card._formatted_meaning = format_result.formatted_content
 
                         # Track usage statistics
                         if format_result.token_usage:
@@ -820,11 +821,17 @@ def convert(
                     click.echo(f"    {click.style('Audio:', fg='blue', bold=True)} {anki_card.pronunciation}")
 
                 click.echo(f"    {click.style('Meaning:', fg='yellow', bold=True)}")
+                # Use formatted meaning if available from AI formatting, otherwise use default formatting
+                if hasattr(anki_card, '_formatted_meaning') and anki_card._formatted_meaning:
+                    display_meaning = anki_card._formatted_meaning
+                else:
+                    display_meaning = anki_card.meaning
+                
                 if html_output:
                     # For HTML output, display formatted HTML
-                    click.echo(f"    {format_html(anki_card.meaning)}")
+                    click.echo(f"    {format_html(display_meaning)}")
                 else:
-                    formatted_meaning = convert_html_to_terminal(anki_card.meaning)
+                    formatted_meaning = convert_html_to_terminal(display_meaning)
                     meaning_box = format_meaning_box(formatted_meaning)
                     click.echo(meaning_box)
 
@@ -888,12 +895,19 @@ def convert(
                     else:
                         examples_content = format_examples_with_semantic_markup(card.examples)
                     
+                    # Use formatted meaning if available (from AI formatting)
+                    meaning_content = None
+                    if hasattr(card, '_formatted_meaning') and card._formatted_meaning:
+                        meaning_content = card._formatted_meaning
+                    else:
+                        meaning_content = convert_to_html_format(card.meaning)
+                    
                     df_data.append(
                         {
                             "simplified": card.simplified,
                             "pinyin": card.pinyin,
                             "pronunciation": card.pronunciation,
-                            "meaning": convert_to_html_format(card.meaning),
+                            "meaning": meaning_content,
                             "examples": examples_content,
                             "phonetic_component": card.phonetic_component,
                             "structural_decomposition": card.structural_decomposition,
