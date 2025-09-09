@@ -22,6 +22,8 @@ from tencentcloud.common.profile.client_profile import ClientProfile
 from tencentcloud.common.profile.http_profile import HttpProfile
 from tencentcloud.tts.v20190823 import tts_client, models
 
+from .audio_enhancement import get_audio_enhancer
+
 logger = logging.getLogger(__name__)
 
 # Audio normalization target
@@ -106,6 +108,13 @@ class AudioGenerator(ABC):
             logger.warning(f"Failed to normalize audio volume for {audio_file}: {e}")
             # Don't raise - normalization failure shouldn't break audio generation
 
+    def _enhance_audio(self, audio_file: str, target_dbfs: float = TARGET_DBFS) -> None:
+        """
+        Enhance audio with denoising and normalization.
+        Default implementation just normalizes - can be overridden by subclasses.
+        """
+        self._normalize_audio_volume(audio_file, target_dbfs)
+
     @abstractmethod
     def generate_audio(self, text: str, output_file: str) -> Optional[str]:
         """Generate audio for the given text."""
@@ -189,6 +198,46 @@ class ForvoGenerator(AudioGenerator):
 
     def get_provider_name(self) -> str:
         return "forvo"
+
+    def _enhance_audio(self, audio_file: str, target_dbfs: float = TARGET_DBFS) -> None:
+        """
+        Enhance Forvo audio with Facebook Denoiser and normalization.
+        Falls back to normalization only if denoiser is unavailable.
+        """
+        try:
+            enhancer = get_audio_enhancer()
+            
+            if enhancer.is_available():
+                logger.info(f"Applying Facebook Denoiser + normalization to Forvo audio: {audio_file}")
+                # Create temporary enhanced file
+                import tempfile
+                with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as temp_file:
+                    temp_enhanced = temp_file.name
+                
+                try:
+                    if enhancer.enhance_audio_file(audio_file, temp_enhanced, target_dbfs):
+                        # Replace original with enhanced version
+                        import shutil
+                        shutil.move(temp_enhanced, audio_file)
+                        logger.info(f"✅ Enhanced Forvo audio with denoising and normalization")
+                    else:
+                        logger.warning("Enhancement failed, falling back to normalization only")
+                        self._normalize_audio_volume(audio_file, target_dbfs)
+                finally:
+                    # Clean up temp file if it still exists
+                    try:
+                        if os.path.exists(temp_enhanced):
+                            os.unlink(temp_enhanced)
+                    except Exception:
+                        pass
+            else:
+                logger.debug("Facebook Denoiser not available, using normalization only for Forvo audio")
+                self._normalize_audio_volume(audio_file, target_dbfs)
+                
+        except Exception as e:
+            logger.warning(f"Failed to enhance Forvo audio {audio_file}: {e}")
+            logger.warning("Falling back to normalization only")
+            self._normalize_audio_volume(audio_file, target_dbfs)
 
     def _find_cached_forvo_audio(self, text: str) -> Optional[str]:
         """Find any cached Forvo audio for this text, regardless of username."""
@@ -356,6 +405,10 @@ class ForvoGenerator(AudioGenerator):
             with open(temp_file.name, "wb") as f:
                 f.write(audio_response.content)
 
+            # Enhance preview audio (denoise + normalize for better selection experience)
+            logger.debug(f"Enhancing preview audio for better playback quality")
+            self._enhance_audio(temp_file.name)
+
             return temp_file.name
 
         except Exception as e:
@@ -516,8 +569,8 @@ class ForvoGenerator(AudioGenerator):
             with open(output_file, "wb") as f:
                 f.write(audio_response.content)
 
-            # Normalize audio volume
-            self._normalize_audio_volume(output_file)
+            # Enhance audio (denoise + normalize for Forvo)
+            self._enhance_audio(output_file)
 
             logger.info(f"Forvo downloaded audio for '{text}' by '{username}' to {output_file}")
             return output_file
