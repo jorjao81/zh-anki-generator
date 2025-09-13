@@ -54,6 +54,7 @@ class CharTypeConfig(BaseModel):
     max_tokens: Optional[int] = None
     reasoning_effort: Optional[str] = None
     use_web_search: Optional[bool] = None
+    fallback_models: Optional[List[Dict[str, Any]]] = None
 
     @validator("provider")
     def validate_provider(cls, v):

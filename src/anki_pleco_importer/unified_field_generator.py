@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any, List
@@ -173,17 +174,84 @@ class AIFieldGenerator(BaseFieldGenerator):
         return input_cost + output_cost
 
     def _generate_field_for_entry(self, entry: Any) -> Optional[FieldGenerationResult]:
-        """Generate fields for a single entry."""
+        """Generate fields for a single entry with fallback support."""
+        chinese = entry.chinese
+        pinyin = entry.pinyin
+        char_type = self._get_char_type(chinese)
+
+        # Check if feature is enabled for this character type
+        if not self.config_loader.is_feature_enabled("field_generation", char_type):
+            return None
+
+        # Get primary config
+        primary_config = self.config_loader.get_feature_config("field_generation", char_type)
+        
+        # Try primary model first
+        result = self._generate_with_config(entry, primary_config, char_type)
+        
+        # If primary model failed or returned empty result, try fallback models
+        if not result or self._is_empty_result(result):
+            fallback_configs = primary_config.get("fallback_models", []) or []
+            
+            for i, fallback_config in enumerate(fallback_configs):
+                print(f"🔄 Trying fallback {i+1}: {fallback_config.get('provider')}/{fallback_config.get('model')} for '{chinese}'")
+                try:
+                    # Merge primary config with fallback config (fallback takes precedence)
+                    merged_config = {**primary_config, **fallback_config}
+                    
+                    # Ensure API key matches the fallback provider (not the primary provider)
+                    fallback_provider = merged_config.get('provider')
+                    primary_provider = primary_config.get('provider')
+                    
+                    # If switching providers, we need to get the correct API key for the new provider
+                    if fallback_provider != primary_provider or not fallback_config.get('api_key'):
+                        if fallback_provider == 'gpt':
+                            merged_config['api_key'] = os.getenv('OPENAI_API_KEY')
+                        elif fallback_provider == 'gemini':
+                            merged_config['api_key'] = os.getenv('GEMINI_API_KEY')
+                        elif fallback_provider == 'deepseek':
+                            merged_config['api_key'] = os.getenv('DEEPSEEK_API_KEY')
+                    
+                    # Special handling for GPT-5: remove temperature if present
+                    if (merged_config.get('provider') == 'gpt' and 
+                        merged_config.get('model', '').startswith('gpt-5')):
+                        # GPT-5 doesn't support custom temperature - remove it
+                        merged_config.pop('temperature', None)
+                    
+                    result = self._generate_with_config(entry, merged_config, char_type)
+                    
+                    if result and not self._is_empty_result(result):
+                        print(f"✅ Fallback {i+1} succeeded for '{chinese}'")
+                        break
+                        
+                except Exception as e:
+                    print(f"❌ Fallback {i+1} failed for '{chinese}': {str(e)[:100]}...")
+                    continue
+        
+        return result
+
+    def _is_empty_result(self, result: FieldGenerationResult) -> bool:
+        """Check if a result is effectively empty."""
+        if not result:
+            return True
+        
+        etymology = (result.etymology or "").strip()
+        structural = (result.structural_decomposition or "").strip()
+        
+        # Consider result empty if both fields are empty/minimal OR either field is completely empty
+        both_minimal = len(etymology) < 10 and len(structural) < 10
+        either_empty = len(etymology) == 0 or len(structural) == 0
+        
+        return both_minimal or either_empty
+
+    def _generate_with_config(self, entry: Any, config: Dict[str, Any], char_type: str) -> Optional[FieldGenerationResult]:
+        """Generate fields using a specific configuration."""
         try:
             chinese = entry.chinese
             pinyin = entry.pinyin
-            char_type = self._get_char_type(chinese)
 
-            # Check if feature is enabled for this character type
-            if not self.config_loader.is_feature_enabled("field_generation", char_type):
-                return None
-
-            client, config = self._get_client_and_config(char_type)
+            # Get client for this configuration
+            client = self._get_client_for_config(config)
             provider = config.get("provider", "gpt")
 
             # Load prompt
@@ -195,15 +263,14 @@ class AIFieldGenerator(BaseFieldGenerator):
 
             # Create request data
             request_data = {"character": chinese, "pinyin": pinyin}
-
             user_message = json.dumps(request_data, ensure_ascii=False)
 
             if provider in ["gpt", "deepseek"]:
-                # Handle o1 models differently (GPT only)
+                # Handle different model types
                 model = config.get("model", "gpt-4o-mini" if provider == "gpt" else "deepseek-chat")
 
                 if provider == "gpt" and (model.startswith("gpt-5") or model.startswith("o1")):
-                    # Use newer parameters for o1 models
+                    # GPT-5 and o1 models: Use reasoning effort, no temperature, user-only message
                     response = client.chat.completions.create(
                         model=model,
                         messages=[{"role": "user", "content": f"{prompt}\n\n{user_message}"}],
@@ -211,7 +278,7 @@ class AIFieldGenerator(BaseFieldGenerator):
                         reasoning_effort=config.get("reasoning_effort", "medium"),
                     )
                 else:
-                    # Use standard parameters for other models (including all DeepSeek models)
+                    # Standard models (GPT-4, DeepSeek): Use temperature and system/user messages
                     response = client.chat.completions.create(
                         model=model,
                         messages=[{"role": "system", "content": prompt}, {"role": "user", "content": user_message}],
@@ -219,7 +286,7 @@ class AIFieldGenerator(BaseFieldGenerator):
                         max_completion_tokens=config.get("max_tokens", 800),
                     )
 
-                response_text = response.choices[0].message.content.strip()
+                response_text = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
 
                 # Calculate token usage
                 usage = response.usage
@@ -280,11 +347,41 @@ class AIFieldGenerator(BaseFieldGenerator):
                 return FieldGenerationResult(etymology="", structural_decomposition="", token_usage=token_usage)
 
         except Exception as e:
-            print(f"Field generation error for {entry.chinese}: {e}")
-            import traceback
-
-            traceback.print_exc()
+            # Log error but don't print full stack trace by default
+            print(f"❌ {config.get('provider')}/{config.get('model')} failed: {e}")
             return None
+
+    def _get_client_for_config(self, config: Dict[str, Any]):
+        """Get AI client for a specific configuration."""
+        provider = config.get("provider", "gpt")
+        
+        # Create a unique key for this configuration
+        model = config.get("model", "")
+        api_key = config.get("api_key", "")[:10]  # First 10 chars for uniqueness
+        client_key = f"{provider}_{model}_{api_key}"
+        
+        if client_key not in self._clients:
+            if provider == "gpt":
+                from openai import OpenAI
+                # Only pass base_url if it's actually set
+                client_kwargs = {"api_key": config.get("api_key")}
+                if config.get("base_url"):
+                    client_kwargs["base_url"] = config.get("base_url")
+                self._clients[client_key] = OpenAI(**client_kwargs)
+            elif provider == "gemini":
+                import google.generativeai as genai
+                genai.configure(api_key=config.get("api_key"))
+                self._clients[client_key] = genai.GenerativeModel(config.get("model"))
+            elif provider == "deepseek":
+                from openai import OpenAI
+                self._clients[client_key] = OpenAI(
+                    api_key=config.get("api_key"), 
+                    base_url=config.get("base_url", "https://api.deepseek.com")
+                )
+            else:
+                raise ValueError(f"Unsupported provider: {provider}")
+        
+        return self._clients[client_key]
 
     def generate_fields(self, entries: List[Any]) -> Dict[int, FieldGenerationResult]:
         """Generate fields for multiple entries using ThreadPool."""
